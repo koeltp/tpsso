@@ -47,23 +47,10 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LoginPath = null; // 禁用自动重定向
 });
 
-// 4. CORS 配置
-// 登录页需要带 cookie，必须指定具体域名 + AllowCredentials
-// 其他客户端使用 JWT/Bearer 认证，不需要 cookie，可用 AllowAnyOrigin
-var ssoSettings = builder.Configuration.GetSection(SsoOptions.SectionName).Get<SsoOptions>() ?? new SsoOptions();
+// 4. CORS 配置（与 oauth 项目一致：本地开发通过 vite proxy 同域访问，无需 cookie 跨域）
 builder.Services.AddCors(options =>
 {
-    // 策略1：登录页专用 — 需要 Cookie 跨域
-    options.AddPolicy("AllowLoginOrigin", policy =>
-    {
-        policy.WithOrigins(ssoSettings.LoginBaseUrl)
-              .AllowCredentials()
-              .AllowAnyHeader()
-              .AllowAnyMethod();
-    });
-
-    // 策略2：API 通用 — 不需要 Cookie
-    options.AddPolicy("AllowApiOrigin", policy =>
+    options.AddDefaultPolicy(policy =>
     {
         policy.AllowAnyOrigin()
               .AllowAnyHeader()
@@ -128,8 +115,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowApiOrigin"); // 全局默认：API 通用策略（无需 cookie）
-// AccountController 单独标注 [EnableCors("AllowLoginOrigin")] 覆盖
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 

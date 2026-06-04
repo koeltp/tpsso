@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,7 +6,6 @@ namespace TPSSO.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [IgnoreAntiforgeryToken]
-    [EnableCors("AllowLoginOrigin")] // 登录页需要 Cookie 跨域
     public class AccountController : ControllerBase
     {
         private readonly SignInManager<IdentityUser> _signInManager;

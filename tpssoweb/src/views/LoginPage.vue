@@ -32,12 +32,10 @@ onMounted(() => {
 const handleLogin = async () => {
   error.value = ''
   try {
-    await axios.post('https://localhost:7044/api/account/login', {
+    await axios.post('/api/account/login', {
       username: username.value,
       password: password.value,
       rememberMe: rememberMe.value
-    }, {
-      withCredentials: true   // 必须
     })
     // 登录成功，重定向回认证服务器的授权端点
     window.location.href = returnUrl.value

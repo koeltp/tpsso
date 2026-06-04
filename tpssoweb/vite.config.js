@@ -11,6 +11,18 @@ export default defineConfig({
     }
   },
   server: {
-    port: 3008
+    port: 3008,
+    proxy: {
+      '/api': {
+        target: 'https://localhost:7044',
+        changeOrigin: true,
+        secure: false
+      },
+      '/connect': {
+        target: 'https://localhost:7044',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   }
 })
