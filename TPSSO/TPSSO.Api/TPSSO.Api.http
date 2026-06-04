@@ -1,0 +1,6 @@
+@TPSSO.Api_HostAddress = http://localhost:5177
+
+GET {{TPSSO.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,46 @@
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using OpenIddict.EntityFrameworkCore.Models;
+
+namespace TPSSO.Api
+{
+    public class ApplicationDbContext : IdentityDbContext<IdentityUser>
+    {
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+            : base(options) { }
+
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+
+            // 1. 让 OpenIddict 构建实体模型
+            builder.UseOpenIddict();
+
+            // 2. 限制索引相关列的长度，避免 MySQL 索引键过长（max 3072 bytes for utf8mb4）
+            builder.Entity<OpenIddictEntityFrameworkCoreToken>(entity =>
+            {
+                entity.Property(e => e.Subject).HasMaxLength(200);
+                entity.Property(e => e.Status).HasMaxLength(50);
+                entity.Property(e => e.Type).HasMaxLength(100);
+            });
+
+            builder.Entity<OpenIddictEntityFrameworkCoreAuthorization>(entity =>
+            {
+                entity.Property(e => e.Subject).HasMaxLength(200);
+                entity.Property(e => e.Status).HasMaxLength(50);
+                entity.Property(e => e.Type).HasMaxLength(50);
+            });
+
+            builder.Entity<OpenIddictEntityFrameworkCoreScope>(entity =>
+            {
+                entity.Property(e => e.Name).HasMaxLength(200);
+            });
+
+            builder.Entity<OpenIddictEntityFrameworkCoreApplication>(entity =>
+            {
+                entity.Property(e => e.ClientId).HasMaxLength(100);
+            });
+        }
+    }
+}

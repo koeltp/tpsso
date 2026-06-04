@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/oidc-client-ts@2.2.1/dist/umd/oidc-client-ts.js"></script>
+  <script>
+    new Oidc.UserManager().signinSilentCallback().catch(error => {
+      console.error('silent renew error', error)
+    })
+  </script>
+</head>
+<body></body>
+</html>
