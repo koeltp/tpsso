@@ -1,9 +1,9 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import Login from '../views/Login.vue'
 
-const routes = [
-  { path: '/custom-login', component: Login },
-  { path: '/:pathMatch(.*)*', redirect: '/custom-login' }
+const routes: RouteRecordRaw[] = [
+  { path: '/login', component: Login },
+  { path: '/:pathMatch(.*)*', redirect: '/login' }
 ]
 
 const router = createRouter({

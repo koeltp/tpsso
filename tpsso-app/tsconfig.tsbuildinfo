@@ -1,0 +1,1 @@
+{"root":["./src/main.ts","./src/vite-env.d.ts","./src/auth/oidcconfig.ts","./src/router/index.ts","./src/app.vue","./src/views/about.vue","./src/views/callback.vue","./src/views/home.vue"],"version":"6.0.3"}

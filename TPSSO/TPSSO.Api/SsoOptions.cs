@@ -14,5 +14,5 @@ public class SsoOptions
     public string AppBaseUrl { get; set; } = "http://localhost:3007";
 
     /// <summary>自定义登录页路径</summary>
-    public string LoginPath { get; set; } = "/custom-login";
+    public string LoginPath { get; set; } = "/login";
 }
