@@ -20,7 +20,8 @@ onMounted(async () => {
 })
 
 const logout = async () => {
-  await userManager.signoutRedirect()
+  const user = await userManager.getUser()
+  await userManager.signoutRedirect({ id_token_hint: user?.id_token })
   localStorage.removeItem('access_token')
   localStorage.removeItem('id_token')
 }

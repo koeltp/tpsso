@@ -73,6 +73,7 @@ namespace TPSSO.Api
                 {
                     Permissions.Endpoints.Authorization,
                     Permissions.Endpoints.Token,
+                    Permissions.Endpoints.EndSession,
                     Permissions.ResponseTypes.Code,
                     Permissions.GrantTypes.AuthorizationCode,
                     Permissions.Scopes.Email,
@@ -81,8 +82,8 @@ namespace TPSSO.Api
                 });
 
 
-                string testEmail = "admin@test.com";
-                string testPassword = "AdminPassword123!";
+                string testEmail = "tp@taipi.top";
+                string testPassword = "Admin@123";
 
                 // 检查用户是否存在，如果不存在则创建
                 if (await userManager.FindByEmailAsync(testEmail) == null)

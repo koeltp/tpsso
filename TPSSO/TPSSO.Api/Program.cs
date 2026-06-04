@@ -9,10 +9,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 var cookieDomain = builder.Configuration["CookieSettings:Domain"];
 
+// 注册 SsoOptions 到 DI 容器，支持 IOptions<T> 注入
+builder.Services.Configure<SsoOptions>(builder.Configuration.GetSection(SsoOptions.SectionName));
+
 // Add services to the container.
 // 1. 数据库配置 - MySQL
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-//var serverVersion = ServerVersion.AutoDetect(connectionString);
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
@@ -46,11 +48,12 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 // 4. CORS 配置（允许登录页跨域）
-builder.Services.AddCors(options =>
+var ssoSettings = builder.Configuration.GetSection(SsoOptions.SectionName).Get<SsoOptions>() ?? new SsoOptions();
+builder.Services.AddCors(options=>
 {
     options.AddPolicy("AllowLoginOrigin", policy =>
     {
-        policy.WithOrigins("http://localhost:3007", "http://localhost:3008") // 添加所有前端源
+        policy.WithOrigins(ssoSettings.AppBaseUrl, ssoSettings.LoginBaseUrl)
              .AllowCredentials()               // 允许携带 Cookie
              .AllowAnyHeader()
               .AllowAnyMethod();
@@ -63,16 +66,13 @@ builder.Services.AddOpenIddict()
     // 存储配置
     .AddCore(options =>
     {
-        options.UseEntityFrameworkCore()
-               .UseDbContext<ApplicationDbContext>();
-               //.ReplaceDefaultEntities<int>(); // 使用 int 作为主键类型
+        options.UseEntityFrameworkCore().UseDbContext<ApplicationDbContext>();
         options.UseQuartz(); // 用于清理过期令牌
     })
-    // 服务端配置
+    
     .AddServer(options =>
     {
-        
-        // 端点
+        // 配置服务端的端点
         options.SetAuthorizationEndpointUris("/connect/authorize")
                .SetTokenEndpointUris("/connect/token")
                .SetUserInfoEndpointUris("/connect/userinfo")
@@ -123,22 +123,11 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-
-//using (var scope = app.Services.CreateScope())
-//{
-//    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-//    var scopeManager = scope.ServiceProvider.GetRequiredService<IOpenIddictScopeManager>();
-//    var applicationManager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
-//    await ClientSeeder.SeedAsync(context,applicationManager,scopeManager); // 初始化客户端数据
-
-
-
-//    var result= await applicationManager.FindByClientIdAsync("tpsso_spa_client");
-//    Console.WriteLine(result != null ? "客户端数据已初始化" : "客户端数据初始化失败");
-//}
 using (var scope = app.Services.CreateScope())
 {
     var seeder = scope.ServiceProvider.GetRequiredService<ClientSeeder>();
     await seeder.SeedAsync();
 }
+
+
 app.Run();

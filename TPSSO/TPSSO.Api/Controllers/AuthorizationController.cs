@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
@@ -22,19 +23,22 @@ public class AuthorizationController : ControllerBase
     private readonly IOpenIddictScopeManager _scopeManager;
     private readonly SignInManager<IdentityUser> _signInManager;
     private readonly UserManager<IdentityUser> _userManager;
+    private readonly SsoOptions _ssoOptions;
 
     public AuthorizationController(
         IOpenIddictApplicationManager applicationManager,
         IOpenIddictAuthorizationManager authorizationManager,
         IOpenIddictScopeManager scopeManager,
         SignInManager<IdentityUser> signInManager,
-        UserManager<IdentityUser> userManager)
+        UserManager<IdentityUser> userManager,
+        IOptions<SsoOptions> ssoOptions)
     {
         _applicationManager = applicationManager;
         _authorizationManager = authorizationManager;
         _scopeManager = scopeManager;
         _signInManager = signInManager;
         _userManager = userManager;
+        _ssoOptions = ssoOptions.Value;
     }
 
     [HttpGet("authorize")]
@@ -51,7 +55,7 @@ public class AuthorizationController : ControllerBase
             var returnUrl = $"{Request.Scheme}://{Request.Host}/connect/authorize{HttpContext.Request.QueryString}";
             Console.WriteLine($"========================={HttpContext.Request.QueryString}==================================");
             var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
-            var loginUrl = $"http://localhost:3008/custom-login?returnUrl={encodedReturnUrl}";
+            var loginUrl = $"{_ssoOptions.LoginBaseUrl}{_ssoOptions.LoginPath}?returnUrl={encodedReturnUrl}";
             return Redirect(loginUrl);
         }
 
@@ -71,7 +75,7 @@ public class AuthorizationController : ControllerBase
             var returnUrl = $"{Request.Scheme}://{Request.Host}/connect/authorize{HttpContext.Request.QueryString}";
             Console.WriteLine($"111111111111111111111111111111111111111111111111111111111111111111111111111111111{HttpContext.Request.QueryString}==================================");
             var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
-            var loginUrl = $"http://localhost:3008/custom-login?returnUrl={encodedReturnUrl}";
+            var loginUrl = $"{_ssoOptions.LoginBaseUrl}{_ssoOptions.LoginPath}?returnUrl={encodedReturnUrl}";
             return Redirect(loginUrl);
         }
 
@@ -113,6 +117,25 @@ public class AuthorizationController : ControllerBase
         return SignIn(ticket.Principal, ticket.Properties, ticket.AuthenticationScheme);
     }
 
+    [HttpGet("logout")]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout()
+    {
+        var request = HttpContext.GetOpenIddictServerRequest();
+
+        // 登出本地 Cookie 会话
+        await _signInManager.SignOutAsync();
+
+        // 如果请求中包含 post_logout_redirect_uri，则重定向到该地址
+        if (request?.PostLogoutRedirectUri != null)
+        {
+            return Redirect(request.PostLogoutRedirectUri);
+        }
+
+        // 否则重定向到默认登录页
+        return Redirect(_ssoOptions.LoginBaseUrl);
+    }
+
     [HttpPost("token")]
     public async Task<IActionResult> Exchange()
     {
@@ -140,7 +163,7 @@ public class AuthorizationController : ControllerBase
 
                 // 从 principal 中获取用户 ID
                 var userId = result.Principal.FindFirst(Claims.Subject)?.Value;
-                var user = await _userManager.FindByIdAsync(userId);
+                var user = await _userManager.FindByIdAsync(userId!);
                 if (user == null)
                 {
                     return Forbid(authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
