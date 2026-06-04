@@ -1,8 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import LoginPage from '../views/LoginPage.vue'
+import Login from '../views/Login.vue'
 
 const routes = [
-  { path: '/custom-login', component: LoginPage },
+  { path: '/custom-login', component: Login },
   { path: '/:pathMatch(.*)*', redirect: '/custom-login' }
 ]
 
