@@ -34,6 +34,24 @@ namespace TPSSO.Api.Controllers
             await _signInManager.SignOutAsync();
             return Ok();
         }
+
+        [HttpGet("me")]
+        public async Task<IActionResult> Me()
+        {
+            if (User.Identity?.IsAuthenticated != true)
+                return Unauthorized();
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized();
+
+            return Ok(new
+            {
+                username = user.UserName,
+                email = user.Email,
+                avatarUrl = ""
+            });
+        }
     }
 
     public class LoginMdoel

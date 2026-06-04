@@ -10,7 +10,24 @@
         </router-link>
         <div class="navbar-right">
           <router-link to="/" class="nav-link">首页</router-link>
-          <router-link to="/login" class="nav-link">登录</router-link>
+          <el-dropdown trigger="click" v-if="userInfo">
+            <span class="user-dropdown">
+              <el-avatar :size="32" class="user-avatar">{{ userInfo.username.charAt(0).toUpperCase() }}</el-avatar>
+              <span class="user-name">{{ userInfo.username }}</span>
+              <el-icon class="dropdown-icon"><ArrowDown /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item @click="goProfile">
+                  <el-icon><User /></el-icon>个人中心
+                </el-dropdown-item>
+                <el-dropdown-item divided @click="doLogout">
+                  <el-icon><SwitchButton /></el-icon>退出
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+          <router-link v-else to="/login" class="nav-link">登录</router-link>
         </div>
       </div>
     </nav>
@@ -117,7 +134,19 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Lock, Connection, Monitor, User, Setting, CircleCheck, Odometer } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+import { Lock, Connection, Monitor, User, Setting, CircleCheck, Odometer, ArrowDown, SwitchButton } from '@element-plus/icons-vue'
+import api from '@/utils/api'
+
+const router = useRouter()
+
+interface UserInfo {
+  username: string
+  email: string
+  avatarUrl: string
+}
+
+const userInfo = ref<UserInfo | null>(null)
 
 const stats = ref({
   totalUsers: 0,
@@ -127,6 +156,14 @@ const stats = ref({
 })
 
 onMounted(async () => {
+  // 检查登录状态
+  try {
+    const res = await api.get('/api/account/me')
+    userInfo.value = res.data
+  } catch {
+    userInfo.value = null
+  }
+
   // 模拟数据
   stats.value = {
     totalUsers: 12846,
@@ -135,6 +172,20 @@ onMounted(async () => {
     activeClients: 23
   }
 })
+
+const goProfile = () => {
+  router.push('/profile')
+}
+
+const doLogout = async () => {
+  try {
+    await api.post('/api/account/logout')
+  } catch {
+    // ignore
+  }
+  userInfo.value = null
+  router.push('/')
+}
 </script>
 
 <style scoped>
@@ -197,6 +248,37 @@ onMounted(async () => {
 .nav-link.router-link-active {
   color: #409eff;
   font-weight: 500;
+}
+
+.user-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.user-dropdown:hover {
+  background: #f5f7fa;
+}
+
+.user-avatar {
+  background: #409eff;
+  color: white;
+  font-weight: 600;
+}
+
+.user-name {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+}
+
+.dropdown-icon {
+  font-size: 12px;
+  color: #999;
 }
 
 .hero-section {
