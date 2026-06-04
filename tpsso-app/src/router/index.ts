@@ -1,12 +1,25 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
-import Home from '../views/Home.vue'
-import Callback from '../views/Callback.vue'
+import { createRouter, createWebHistory } from 'vue-router'
+import type { RouteRecordRaw } from 'vue-router'
 import { userManager } from '@/auth/oidcConfig'
 
 const routes: RouteRecordRaw[] = [
-  { path: '/', name: 'home', component: Home, meta: { requiresAuth: true } },
-  { path: '/callback', name: 'callback', component: Callback },
-  { path: '/about', name: 'about', component: () => import('../views/About.vue'), meta: { requiresAuth: true } }
+  {
+    path: '/',
+    name: 'Home',
+    component: () => import('@/views/Home.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/callback',
+    name: 'Callback',
+    component: () => import('@/views/Callback.vue')
+  },
+  {
+    path: '/about',
+    name: 'About',
+    component: () => import('@/views/About.vue'),
+    meta: { requiresAuth: true }
+  }
 ]
 
 const router = createRouter({
