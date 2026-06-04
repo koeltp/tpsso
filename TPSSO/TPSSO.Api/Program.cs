@@ -7,8 +7,6 @@ using TPSSO.Api;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var cookieDomain = builder.Configuration["CookieSettings:Domain"];
-
 // 注册 SsoOptions 到 DI 容器，支持 IOptions<T> 注入
 builder.Services.Configure<SsoOptions>(builder.Configuration.GetSection(SsoOptions.SectionName));
 
@@ -41,10 +39,11 @@ builder.Services.Configure<IdentityOptions>(options =>
 // 3. Cookie 配置（跨域必须）
 builder.Services.ConfigureApplicationCookie(options =>
 {
-    options.Cookie.SameSite = SameSiteMode.None;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // 必须 HTTPS
-    options.Cookie.Domain = cookieDomain; //".tpsso.com"; // 子域共享，可选
-    options.LoginPath = null; // 禁用自动重定向
+    // options.Cookie.SameSite = SameSiteMode.None;
+    // options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // 必须 HTTPS
+    // options.Cookie.Domain = ".taipi.top"; // 子域共享，可选
+    
+    options.LoginPath = null; // 禁用自动重定向，API 统一返回 401
 });
 
 // 4. CORS 配置（与 oauth 项目一致：本地开发通过 vite proxy 同域访问，无需 cookie 跨域）
