@@ -47,15 +47,26 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LoginPath = null; // 禁用自动重定向
 });
 
-// 4. CORS 配置（允许登录页跨域）
+// 4. CORS 配置
+// 登录页需要带 cookie，必须指定具体域名 + AllowCredentials
+// 其他客户端使用 JWT/Bearer 认证，不需要 cookie，可用 AllowAnyOrigin
 var ssoSettings = builder.Configuration.GetSection(SsoOptions.SectionName).Get<SsoOptions>() ?? new SsoOptions();
-builder.Services.AddCors(options=>
+builder.Services.AddCors(options =>
 {
+    // 策略1：登录页专用 — 需要 Cookie 跨域
     options.AddPolicy("AllowLoginOrigin", policy =>
     {
-        policy.WithOrigins(ssoSettings.AppBaseUrl, ssoSettings.LoginBaseUrl)
-             .AllowCredentials()               // 允许携带 Cookie
-             .AllowAnyHeader()
+        policy.WithOrigins(ssoSettings.LoginBaseUrl)
+              .AllowCredentials()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+
+    // 策略2：API 通用 — 不需要 Cookie
+    options.AddPolicy("AllowApiOrigin", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
               .AllowAnyMethod();
     });
 });
@@ -117,7 +128,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors("AllowLoginOrigin"); // 应用 CORS 策略 必须在 UseAuthentication 之前
+app.UseCors("AllowApiOrigin"); // 全局默认：API 通用策略（无需 cookie）
+// AccountController 单独标注 [EnableCors("AllowLoginOrigin")] 覆盖
 app.UseAuthentication();
 app.UseAuthorization();
 
