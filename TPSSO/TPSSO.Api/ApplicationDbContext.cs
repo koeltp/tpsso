@@ -17,6 +17,15 @@ namespace TPSSO.Api
             // 1. 让 OpenIddict 构建实体模型
             builder.UseOpenIddict();
 
+            builder.Entity<IdentityUser>(o =>
+            {
+                o.Property(u => u.UserName).HasMaxLength(100);
+                o.Property(u => u.NormalizedUserName).HasMaxLength(100);
+                o.Property(u => u.Email).HasMaxLength(100);
+                o.Property(u => u.NormalizedEmail).HasMaxLength(200);
+                o.Property(u=>u.PhoneNumber).HasMaxLength(20);
+            });
+
             // 2. 限制索引相关列的长度，避免 MySQL 索引键过长（max 3072 bytes for utf8mb4）
             builder.Entity<OpenIddictEntityFrameworkCoreToken>(entity =>
             {
