@@ -41,8 +41,11 @@ public class AuthorizationController : ControllerBase
         _ssoOptions = ssoOptions.Value;
     }
 
+    /// <summary>
+    /// GET /connect/authorize - 展示授权确认页面
+    /// 用户已登录时，重定向到前端授权确认页面让用户选择同意或拒绝
+    /// </summary>
     [HttpGet("authorize")]
-    [HttpPost("authorize")]
     public async Task<IActionResult> Authorize()
     {
         var request = HttpContext.GetOpenIddictServerRequest() ??
@@ -51,15 +54,13 @@ public class AuthorizationController : ControllerBase
         // 1. 如果用户尚未登录，重定向到前端登录页面
         if (!User.Identity?.IsAuthenticated == true)
         {
-            // 保存当前授权请求的完整URL，以便登录后返回
             var returnUrl = $"{Request.Scheme}://{Request.Host}/connect/authorize{HttpContext.Request.QueryString}";
-            Console.WriteLine($"========================={HttpContext.Request.QueryString}==================================");
             var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
             var loginUrl = $"{_ssoOptions.LoginBaseUrl}{_ssoOptions.LoginPath}?returnUrl={encodedReturnUrl}";
             return Redirect(loginUrl);
         }
 
-        // 2. 用户已登录，验证客户端应用是否存在
+        // 2. 验证客户端应用是否存在
         var application = await _applicationManager.FindByClientIdAsync(request.ClientId);
         if (application == null)
         {
@@ -70,22 +71,72 @@ public class AuthorizationController : ControllerBase
         var user = await _userManager.GetUserAsync(User);
         if (user == null)
         {
-            // 用户不存在，需要登出并重定向到登录页
             await _signInManager.SignOutAsync();
             var returnUrl = $"{Request.Scheme}://{Request.Host}/connect/authorize{HttpContext.Request.QueryString}";
-            Console.WriteLine($"111111111111111111111111111111111111111111111111111111111111111111111111111111111{HttpContext.Request.QueryString}==================================");
             var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
             var loginUrl = $"{_ssoOptions.LoginBaseUrl}{_ssoOptions.LoginPath}?returnUrl={encodedReturnUrl}";
             return Redirect(loginUrl);
         }
 
-        // 4. 创建身份标识（ClaimsIdentity）
+        // 4. 获取客户端应用的显示名称
+        var appName = (await _applicationManager.GetDisplayNameAsync(application)) ?? request.ClientId;
+
+        // 5. 重定向到前端授权确认页面，携带授权请求参数
+        var consentUrl = $"{_ssoOptions.LoginBaseUrl}{_ssoOptions.ConsentPath}" +
+            $"?client_id={Uri.EscapeDataString(request.ClientId)}" +
+            $"&scope={Uri.EscapeDataString(string.Join(" ", request.GetScopes()))}" +
+            $"&redirect_uri={Uri.EscapeDataString(request.RedirectUri ?? "")}" +
+            $"&state={Uri.EscapeDataString(request.State ?? "")}" +
+            $"&response_type={Uri.EscapeDataString(request.ResponseType ?? "")}" +
+            $"&code_challenge={Uri.EscapeDataString(request.CodeChallenge ?? "")}" +
+            $"&code_challenge_method={Uri.EscapeDataString(request.CodeChallengeMethod ?? "")}" +
+            $"&app_name={Uri.EscapeDataString(appName)}";
+        return Redirect(consentUrl);
+    }
+
+    /// <summary>
+    /// POST /connect/authorize - 用户同意授权后，签发授权码
+    /// 前端授权确认页面用户点击"同意"后，表单提交到此端点
+    /// </summary>
+    [HttpPost("authorize")]
+    public async Task<IActionResult> AuthorizeConfirm()
+    {
+        var request = HttpContext.GetOpenIddictServerRequest() ??
+                      throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
+
+        // 1. 如果用户尚未登录，重定向到前端登录页面
+        if (!User.Identity?.IsAuthenticated == true)
+        {
+            var returnUrl = $"{Request.Scheme}://{Request.Host}/connect/authorize{HttpContext.Request.QueryString}";
+            var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
+            var loginUrl = $"{_ssoOptions.LoginBaseUrl}{_ssoOptions.LoginPath}?returnUrl={encodedReturnUrl}";
+            return Redirect(loginUrl);
+        }
+
+        // 2. 验证客户端应用是否存在
+        var application = await _applicationManager.FindByClientIdAsync(request.ClientId);
+        if (application == null)
+        {
+            throw new InvalidOperationException("The client application cannot be found.");
+        }
+
+        // 3. 获取当前登录的用户
+        var user = await _userManager.GetUserAsync(User);
+        if (user == null)
+        {
+            await _signInManager.SignOutAsync();
+            var returnUrl = $"{Request.Scheme}://{Request.Host}/connect/authorize{HttpContext.Request.QueryString}";
+            var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
+            var loginUrl = $"{_ssoOptions.LoginBaseUrl}{_ssoOptions.LoginPath}?returnUrl={encodedReturnUrl}";
+            return Redirect(loginUrl);
+        }
+
+        // 4. 用户已同意授权，创建身份标识并签发授权码
         var identity = new ClaimsIdentity(
             authenticationType: TokenValidationParameters.DefaultAuthenticationType,
             nameType: Claims.Name,
             roleType: Claims.Role);
 
-        // 添加必要的声明（sub 是必须的）
         identity.AddClaim(new Claim(Claims.Subject, await _userManager.GetUserIdAsync(user))
             .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
         identity.AddClaim(new Claim(Claims.Name, await _userManager.GetUserNameAsync(user))
@@ -93,7 +144,6 @@ public class AuthorizationController : ControllerBase
         identity.AddClaim(new Claim(Claims.Email, await _userManager.GetEmailAsync(user))
             .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
 
-        // 5. 添加用户角色声明（如果有）
         var roles = await _userManager.GetRolesAsync(user);
         foreach (var role in roles)
         {
@@ -101,19 +151,15 @@ public class AuthorizationController : ControllerBase
                 .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
         }
 
-        // 6. 处理请求的 scopes
-        var scopes = request.GetScopes(); // 返回 ImmutableArray<string>
+        var scopes = request.GetScopes();
         identity.SetScopes(scopes);
         identity.SetResources(await _scopeManager.ListResourcesAsync(scopes).ToListAsync());
 
-        // 7. 创建 AuthenticationTicket
         var ticket = new AuthenticationTicket(
             new ClaimsPrincipal(identity),
             new AuthenticationProperties(),
             OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
 
-        // 8. 可选：设置授权码的过期时间等（这里使用默认）
-        // 9. 返回 SignIn 结果，OpenIddict 会自动生成授权码并重定向到 redirect_uri
         return SignIn(ticket.Principal, ticket.Properties, ticket.AuthenticationScheme);
     }
 

@@ -12,4 +12,7 @@ public class SsoOptions
 
     /// <summary>自定义登录页路径</summary>
     public string LoginPath { get; set; } = "/login";
+
+    /// <summary>授权确认页面路径</summary>
+    public string ConsentPath { get; set; } = "/authorize";
 }

@@ -13,12 +13,6 @@ const routes: RouteRecordRaw[] = [
     path: '/callback',
     name: 'Callback',
     component: () => import('@/views/Callback.vue')
-  },
-  {
-    path: '/about',
-    name: 'About',
-    component: () => import('@/views/About.vue'),
-    meta: { requiresAuth: true }
   }
 ]
 
