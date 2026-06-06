@@ -45,7 +45,7 @@ import { ref, reactive } from 'vue'
 import { useRoute } from 'vue-router'
 import { User, Lock, UserFilled } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import axios from 'axios'
+import { login } from '@/api/auth'
 import logoSrc from '@/assets/logo.png'
 
 const route = useRoute()
@@ -71,10 +71,7 @@ const handleSubmit = async () => {
   error.value = ''
   loading.value = true
   try {
-    await axios.post('/api/account/login', {
-      username: form.username,
-      password: form.password
-    })
+    await login({ username: form.username, password: form.password })
     window.location.href = returnUrl.value
   } catch {
     error.value = '用户名或密码错误'

@@ -68,18 +68,13 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowDown, User, SwitchButton } from '@element-plus/icons-vue'
-import api from '@/utils/api'
+import { getUserInfo, logout as logoutApi } from '@/api/auth'
+import type { UserInfoResult } from '@/api/auth'
 import logoSrc from '@/assets/logo-icon.png'
 
 const router = useRouter()
 
-interface UserInfo {
-  username: string
-  email: string
-  avatarUrl: string
-}
-
-const userInfo = ref<UserInfo | null>(null)
+const userInfo = ref<UserInfoResult | null>(null)
 
 const profile = ref({
   username: 'admin',
@@ -92,11 +87,11 @@ const profile = ref({
 
 onMounted(async () => {
   try {
-    const res = await api.get('/api/account/me')
-    userInfo.value = res.data
-    if (res.data.username) {
-      profile.value.username = res.data.username
-      profile.value.email = res.data.email || 'admin@tpsso.com'
+    const data = await getUserInfo()
+    userInfo.value = data
+    if (data.username) {
+      profile.value.username = data.username
+      profile.value.email = data.email || 'admin@tpsso.com'
     }
   } catch {
     userInfo.value = null
@@ -109,7 +104,7 @@ const goProfile = () => {
 
 const doLogout = async () => {
   try {
-    await api.post('/api/account/logout')
+    await logoutApi()
   } catch {
     // ignore
   }

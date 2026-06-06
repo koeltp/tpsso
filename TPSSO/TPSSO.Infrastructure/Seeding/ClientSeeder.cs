@@ -66,7 +66,7 @@ public class ClientSeeder
             {
                 ClientId = "tpsso_spa_client",
                 ConsentType = ConsentTypes.Implicit,
-                DisplayName = "TPSSO SPA Client",
+                DisplayName = "SPA Client",
                 RedirectUris = { new Uri("http://localhost:3007/callback") },
                 PostLogoutRedirectUris = { new Uri("http://localhost:3007") },
                 Permissions =

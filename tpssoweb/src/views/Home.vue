@@ -134,18 +134,13 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Lock, Connection, Monitor, User, Setting, CircleCheck, Odometer, ArrowDown, SwitchButton } from '@element-plus/icons-vue'
-import api from '@/utils/api'
+import { getUserInfo, logout as logoutApi } from '@/api/auth'
+import type { UserInfoResult } from '@/api/auth'
 import logoSrc from '@/assets/logo-icon.png'
 
 const router = useRouter()
 
-interface UserInfo {
-  username: string
-  email: string
-  avatarUrl: string
-}
-
-const userInfo = ref<UserInfo | null>(null)
+const userInfo = ref<UserInfoResult | null>(null)
 
 const stats = ref({
   totalUsers: 0,
@@ -157,8 +152,7 @@ const stats = ref({
 onMounted(async () => {
   // 检查登录状态
   try {
-    const res = await api.get('/api/account/me')
-    userInfo.value = res.data
+    userInfo.value = await getUserInfo()
   } catch {
     userInfo.value = null
   }
@@ -178,7 +172,7 @@ const goProfile = () => {
 
 const doLogout = async () => {
   try {
-    await api.post('/api/account/logout')
+    await logoutApi()
   } catch {
     // ignore
   }

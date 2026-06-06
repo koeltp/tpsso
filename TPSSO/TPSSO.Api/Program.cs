@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
 using OpenIddict.Validation.AspNetCore;
+using TPSSO.Api.Filters;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Options;
 using TPSSO.Infrastructure.Data;
@@ -87,7 +88,10 @@ builder.Services.AddOpenIddict()
 builder.Services.AddAuthentication(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
 builder.Services.AddAuthorization();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<ModelStateFilter>();
+});
 builder.Services.AddOpenApi();
 
 // 注册应用服务（接口在 Application，实现在 Infrastructure）

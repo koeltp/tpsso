@@ -62,8 +62,8 @@ Domain → 无（零外部依赖）
 
 **规则**：
 - 接口方法接收 Model 对象，不拆成单个参数
+- 返回类型统一使用 `ResponseResult<T>`（来自 TaiPi.Core NuGet 包）
 - Options 类必须定义 `const string SectionName` 用于 DI 注册
-- 返回类型用 Result 模式：成功返回数据/null，失败返回错误信息字符串
 - 命名空间：`TPSSO.Application.Interfaces`、`TPSSO.Application.Models`、`TPSSO.Application.Options`
 
 ### Infrastructure 层（TPSSO.Infrastructure）
@@ -119,35 +119,23 @@ builder.Services.AddScoped<IAccountService, AccountService>();
 
 ### AccountController（业务 API）
 ```csharp
-[ApiController]
-[Route("api/[controller]")]
-[IgnoreAntiforgeryToken]
-public class AccountController : ControllerBase
+[HttpPost("login")]
+public async Task<IActionResult> Login([FromBody] LoginModel model)
 {
-    private readonly IAccountService _accountService;
+    var result = await _accountService.LoginAsync(model);
+    if (result.Code == 401)
+        return Unauthorized(result);
 
-    public AccountController(IAccountService accountService)
-    {
-        _accountService = accountService;
-    }
-
-    [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginModel model)
-    {
-        var success = await _accountService.LoginAsync(model);
-        if (!success)
-            return Unauthorized(new { error = "无效的用户或密码" });
-
-        return Ok(new { success = true });
-    }
+    return Ok(result);
 }
 ```
 
 **要点**：
 - 只注入 Service 接口，不直接注入 UserManager/SignInManager
 - 请求参数用 `[FromBody] Model`
-- 响应用匿名对象或 UserInfoResult 等 Application 层定义的类型
-- 错误返回格式：`new { error = "错误信息" }`
+- Service 返回 `ResponseResult<T>`，Controller 根据 `result.Code` 决定 HTTP 状态码
+- ModelState 校验失败返回 `ResponseResult<T>.BadRequest()`
+- 统一响应格式：`{ code, message, data, timestamp }`
 
 ### AuthorizationController（OIDC 协议）
 - 路由前缀 `connect/`（不是 `api/`）

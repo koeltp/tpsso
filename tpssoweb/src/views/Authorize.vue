@@ -10,7 +10,7 @@
       </div>
       <h1 class="title">授权确认</h1>
       <p class="desc">
-        <strong>{{ appName }}</strong> 请求访问你的以下信息，你可以选择授权的范围：
+        <strong>{{ appName }}</strong> <br/>请求访问你的以下信息，你可以选择授权的范围：
       </p>
 
       <div class="scope-list">

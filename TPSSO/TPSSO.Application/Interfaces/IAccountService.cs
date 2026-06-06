@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Taipi.Core.RQRS;
 using TPSSO.Application.Models;
 
 namespace TPSSO.Application.Interfaces;
@@ -9,37 +10,27 @@ namespace TPSSO.Application.Interfaces;
 public interface IAccountService
 {
     /// <summary>
-    /// 用户登录，成功返回 true
+    /// 用户登录
     /// </summary>
-    Task<bool> LoginAsync(LoginModel model);
+    Task<ResponseResult<bool>> LoginAsync(LoginModel model);
 
     /// <summary>
     /// 用户登出
     /// </summary>
-    Task LogoutAsync();
+    Task<ResponseResult<bool>> LogoutAsync();
 
     /// <summary>
-    /// 获取当前用户信息，未登录返回 null
+    /// 获取当前用户信息
     /// </summary>
-    Task<UserInfoResult?> GetCurrentUserAsync(ClaimsPrincipal principal);
+    Task<ResponseResult<UserInfoResult>> GetCurrentUserAsync(ClaimsPrincipal principal);
 
     /// <summary>
     /// 发送验证码邮件
     /// </summary>
-    Task SendCodeAsync(SendCodeModel model);
+    Task<ResponseResult<bool>> SendCodeAsync(SendCodeModel model);
 
     /// <summary>
-    /// 用户注册，成功返回 null，失败返回错误信息
+    /// 用户注册
     /// </summary>
-    Task<string?> RegisterAsync(RegisterModel model);
-}
-
-/// <summary>
-/// 用户信息返回结果
-/// </summary>
-public class UserInfoResult
-{
-    public string Username { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public string AvatarUrl { get; set; } = string.Empty;
+    Task<ResponseResult<bool>> RegisterAsync(RegisterModel model);
 }

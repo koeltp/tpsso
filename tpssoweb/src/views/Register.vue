@@ -60,7 +60,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { User, Message, Key, Lock, HomeFilled } from '@element-plus/icons-vue'
-import api from '@/utils/api'
+import { sendCode as sendCodeApi, register as registerApi } from '@/api/auth'
 import logoSrc from '@/assets/logo.png'
 
 const router = useRouter()
@@ -112,18 +112,15 @@ const sendCode = async () => {
     return
   }
   try {
-    await api.post('/api/account/send-code', {
-      email: form.email,
-      purpose: 0
-    })
+    await sendCodeApi({ email: form.email, purpose: 0 })
     ElMessage.success('验证码已发送')
     countdown.value = 60
     const timer = setInterval(() => {
       countdown.value--
       if (countdown.value <= 0) clearInterval(timer)
     }, 1000)
-  } catch (error: any) {
-    ElMessage.error(error.response?.data?.error || '发送失败')
+  } catch {
+    // 拦截器已自动提示
   }
 }
 
@@ -134,7 +131,7 @@ const handleRegister = async () => {
 
   loading.value = true
   try {
-    await api.post('/api/account/register', {
+    await registerApi({
       username: form.username,
       email: form.email,
       code: form.code,
@@ -147,8 +144,8 @@ const handleRegister = async () => {
     } else {
       router.push('/login')
     }
-  } catch (error: any) {
-    ElMessage.error(error.response?.data?.error || '注册失败')
+  } catch {
+    // 拦截器已自动提示
   } finally {
     loading.value = false
   }

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Taipi.Core.RQRS;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;
 
@@ -17,65 +18,38 @@ public class AccountController : ControllerBase
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginModel model)
+    public async Task<ResponseResult<bool>> Login([FromBody] LoginModel model)
     {
-        var success = await _accountService.LoginAsync(model);
-        if (!success)
-            return Unauthorized(new { error = "无效的用户或密码" });
-
-        return Ok(new { success = true });
+        return await _accountService.LoginAsync(model);
     }
 
     [HttpPost("logout")]
-    public async Task<IActionResult> Logout()
+    public async Task<ResponseResult<bool>> Logout()
     {
-        await _accountService.LogoutAsync();
-        return Ok();
+        return await _accountService.LogoutAsync();
     }
 
     [HttpGet("me")]
-    public async Task<IActionResult> Me()
+    public async Task<ResponseResult<UserInfoResult>> Me()
     {
-        var userInfo = await _accountService.GetCurrentUserAsync(User);
-        if (userInfo == null)
-            return Unauthorized();
-
-        return Ok(userInfo);
+        return await _accountService.GetCurrentUserAsync(User);
     }
 
     /// <summary>
     /// 发送邮箱验证码
     /// </summary>
     [HttpPost("send-code")]
-    public async Task<IActionResult> SendCode([FromBody] SendCodeModel model)
+    public async Task<ResponseResult<bool>> SendCode([FromBody] SendCodeModel model)
     {
-        if (!ModelState.IsValid)
-            return BadRequest(ModelState);
-
-        try
-        {
-            await _accountService.SendCodeAsync(model);
-            return Ok(new { message = "验证码已发送" });
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, new { error = $"发送验证码失败: {ex.Message}" });
-        }
+        return await _accountService.SendCodeAsync(model);
     }
 
     /// <summary>
     /// 用户注册
     /// </summary>
     [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] RegisterModel model)
+    public async Task<ResponseResult<bool>> Register([FromBody] RegisterModel model)
     {
-        if (!ModelState.IsValid)
-            return BadRequest(ModelState);
-
-        var error = await _accountService.RegisterAsync(model);
-        if (error != null)
-            return BadRequest(new { error });
-
-        return Ok(new { success = true, message = "注册成功" });
+        return await _accountService.RegisterAsync(model);
     }
 }

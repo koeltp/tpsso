@@ -10,4 +10,8 @@
 		<ProjectReference Include="..\TPSSO.Domain\TPSSO.Domain.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <PackageReference Include="Taipi.Core" Version="1.0.3" />
+	</ItemGroup>
+
 </Project>
