@@ -1,3 +1,6 @@
 <Solution>
+  <Project Path="TPSSO.Domain/TPSSO.Domain.csproj" />
+  <Project Path="TPSSO.Application/TPSSO.Application.csproj" />
+  <Project Path="TPSSO.Infrastructure/TPSSO.Infrastructure.csproj" />
   <Project Path="TPSSO.Api/TPSSO.Api.csproj" />
 </Solution>

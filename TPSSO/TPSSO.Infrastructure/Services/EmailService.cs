@@ -1,15 +1,17 @@
 using MailKit.Net.Smtp;
 using MailKit.Security;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MimeKit;
-using TPSSO.Api.Options;
+using TPSSO.Application.Interfaces;
+using TPSSO.Application.Options;
 
-namespace TPSSO.Api.Services;
+namespace TPSSO.Infrastructure.Services;
 
 /// <summary>
 /// 邮件发送服务
 /// </summary>
-public class EmailService
+public class EmailService : IEmailService
 {
     private readonly SmtpOptions _smtpOptions;
     private readonly ILogger<EmailService> _logger;

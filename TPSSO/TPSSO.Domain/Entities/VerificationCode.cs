@@ -1,4 +1,4 @@
-namespace TPSSO.Api.Models;
+namespace TPSSO.Domain.Entities;
 
 /// <summary>
 /// 验证码实体
@@ -24,4 +24,19 @@ public class VerificationCode
 
     /// <summary>是否已使用</summary>
     public bool IsUsed { get; set; }
+
+    /// <summary>
+    /// 判断是否已过期
+    /// </summary>
+    public bool IsExpired() => DateTime.UtcNow > ExpiresAt;
+
+    /// <summary>
+    /// 判断是否仍然有效（未使用且未过期）
+    /// </summary>
+    public bool IsValid() => !IsUsed && !IsExpired();
+
+    /// <summary>
+    /// 标记为已使用
+    /// </summary>
+    public void MarkAsUsed() => IsUsed = true;
 }

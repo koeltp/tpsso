@@ -1,4 +1,4 @@
-namespace TPSSO.Api.Options;
+namespace TPSSO.Application.Options;
 
 /// <summary>
 /// SMTP 邮件发送配置

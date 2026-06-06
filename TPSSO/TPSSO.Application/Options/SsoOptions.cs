@@ -1,4 +1,4 @@
-namespace TPSSO.Api;
+namespace TPSSO.Application.Options;
 
 /// <summary>
 /// SSO 相关的前端地址配置

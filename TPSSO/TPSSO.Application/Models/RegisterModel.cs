@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace TPSSO.Api.Models;
+namespace TPSSO.Application.Models;
 
 /// <summary>
 /// 用户注册请求

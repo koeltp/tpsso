@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace TPSSO.Api.Models;
+namespace TPSSO.Application.Models;
 
 /// <summary>
 /// 发送验证码请求

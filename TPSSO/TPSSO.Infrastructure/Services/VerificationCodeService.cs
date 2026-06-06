@@ -1,18 +1,19 @@
 using Microsoft.EntityFrameworkCore;
-using TPSSO.Api.Models;
+using TPSSO.Application.Interfaces;
+using TPSSO.Domain.Entities;
 
-namespace TPSSO.Api.Services;
+namespace TPSSO.Infrastructure.Services;
 
 /// <summary>
 /// 验证码生成、校验、清理服务
 /// </summary>
-public class VerificationCodeService
+public class VerificationCodeService : IVerificationCodeService
 {
-    private readonly ApplicationDbContext _dbContext;
+    private readonly Data.ApplicationDbContext _dbContext;
     private const int CodeLength = 6;
     private const int ExpirationMinutes = 10;
 
-    public VerificationCodeService(ApplicationDbContext dbContext)
+    public VerificationCodeService(Data.ApplicationDbContext dbContext)
     {
         _dbContext = dbContext;
     }
@@ -38,10 +39,8 @@ public class VerificationCodeService
             return existing.Code;
         }
 
-        // 生成新验证码
         var code = GenerateCode();
         var now = DateTime.UtcNow;
-
         var record = new VerificationCode
         {
             Email = normalizedEmail,
@@ -79,7 +78,8 @@ public class VerificationCodeService
             return false;
         }
 
-        record.IsUsed = true;
+        // 通过实体方法标记已使用，而非直接操作属性
+        record.MarkAsUsed();
         await _dbContext.SaveChangesAsync();
         return true;
     }
