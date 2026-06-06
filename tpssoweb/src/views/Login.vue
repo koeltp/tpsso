@@ -28,6 +28,10 @@
 
       <p v-if="error" class="error-msg">{{ error }}</p>
 
+      <div class="register-link">
+        还没有账号？ <router-link :to="{ path: '/register', query: $route.query.returnUrl ? { returnUrl: $route.query.returnUrl } : {} }">立即注册</router-link>
+      </div>
+
       <div class="admin-link">
         <el-icon style="margin-right: 4px; vertical-align: middle;" :size="14"><UserFilled /></el-icon>
         <a href="https://ssoadmin.taipi.top" target="_blank">管理员登录</a>
@@ -212,6 +216,22 @@ const handleSubmit = async () => {
   font-size: 14px;
   margin-top: -10px;
   margin-bottom: 16px;
+}
+
+.register-link {
+  text-align: center;
+  margin-top: 16px;
+  color: #666;
+  font-size: 14px;
+}
+
+.register-link a {
+  color: #409eff;
+  text-decoration: none;
+}
+
+.register-link a:hover {
+  text-decoration: underline;
 }
 
 .admin-link {

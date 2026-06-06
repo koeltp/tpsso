@@ -16,7 +16,7 @@
       <div class="scope-list">
         <el-checkbox-group v-model="checkedScopes">
           <div v-for="item in scopeItems" :key="item.name" class="scope-item">
-            <el-checkbox :label="item.name" :disabled="item.required">
+            <el-checkbox :value="item.name" :disabled="item.required">
               <div class="scope-label">
                 <el-icon :size="16" class="scope-icon"><component :is="item.icon" /></el-icon>
                 <span>{{ item.label }}</span>

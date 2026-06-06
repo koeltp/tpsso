@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
 using OpenIddict.Validation.AspNetCore;
 using TPSSO.Api;
+using TPSSO.Api.Options;
+using TPSSO.Api.Services;
 
 
 var builder = WebApplication.CreateBuilder(args);
@@ -63,10 +65,10 @@ builder.Services.AddOpenIddict()
     // 存储配置
     .AddCore(options =>
     {
-        options.UseEntityFrameworkCore().UseDbContext<ApplicationDbContext>();
+        options.UseEntityFrameworkCore()
+        .UseDbContext<ApplicationDbContext>();
         options.UseQuartz(); // 用于清理过期令牌
     })
-    
     .AddServer(options =>
     {
         // 配置服务端的端点
@@ -75,7 +77,7 @@ builder.Services.AddOpenIddict()
                .SetUserInfoEndpointUris("/connect/userinfo")
                .SetEndSessionEndpointUris("/connect/logout");
 
-        // 授权码流 + PKCE
+        // 授权码流 + PKCE （最安全，有后端的 Web 应用使用）
         options.AllowAuthorizationCodeFlow()
                .RequireProofKeyForCodeExchange();
 
@@ -104,6 +106,11 @@ builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddScoped<ClientSeeder>();
+
+// 邮件服务
+builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOptions.SectionName));
+builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<VerificationCodeService>();
 
 var app = builder.Build();
 

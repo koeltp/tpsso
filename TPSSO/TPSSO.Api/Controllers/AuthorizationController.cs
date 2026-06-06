@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore;
+using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -137,12 +137,25 @@ public class AuthorizationController : ControllerBase
             nameType: Claims.Name,
             roleType: Claims.Role);
 
+        // sub 声明始终包含
         identity.AddClaim(new Claim(Claims.Subject, await _userManager.GetUserIdAsync(user))
             .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-        identity.AddClaim(new Claim(Claims.Name, await _userManager.GetUserNameAsync(user))
-            .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-        identity.AddClaim(new Claim(Claims.Email, await _userManager.GetEmailAsync(user))
-            .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
+
+        var scopes = request.GetScopes();
+
+        // 只有用户授权了 profile scope 才包含姓名
+        if (scopes.Contains(Scopes.Profile))
+        {
+            identity.AddClaim(new Claim(Claims.Name, await _userManager.GetUserNameAsync(user))
+                .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
+        }
+
+        // 只有用户授权了 email scope 才包含邮箱
+        if (scopes.Contains(Scopes.Email))
+        {
+            identity.AddClaim(new Claim(Claims.Email, await _userManager.GetEmailAsync(user))
+                .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
+        }
 
         var roles = await _userManager.GetRolesAsync(user);
         foreach (var role in roles)
@@ -151,7 +164,6 @@ public class AuthorizationController : ControllerBase
                 .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
         }
 
-        var scopes = request.GetScopes();
         identity.SetScopes(scopes);
         identity.SetResources(await _scopeManager.ListResourcesAsync(scopes).ToListAsync());
 

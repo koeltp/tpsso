@@ -2,11 +2,14 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.EntityFrameworkCore.Models;
+using TPSSO.Api.Models;
 
 namespace TPSSO.Api
 {
     public class ApplicationDbContext : IdentityDbContext<IdentityUser>
     {
+        public DbSet<VerificationCode> VerificationCodes => Set<VerificationCode>();
+
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options) { }
 
@@ -49,6 +52,15 @@ namespace TPSSO.Api
             builder.Entity<OpenIddictEntityFrameworkCoreApplication>(entity =>
             {
                 entity.Property(e => e.ClientId).HasMaxLength(100);
+            });
+
+            // 验证码表配置
+            builder.Entity<VerificationCode>(entity =>
+            {
+                entity.ToTable("VerificationCodes");
+                entity.Property(e => e.Email).HasMaxLength(200).IsRequired();
+                entity.Property(e => e.Code).HasMaxLength(10).IsRequired();
+                entity.HasIndex(e => new { e.Email, e.Purpose, e.IsUsed });
             });
         }
     }

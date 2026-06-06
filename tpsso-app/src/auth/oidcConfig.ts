@@ -6,7 +6,7 @@ export const userManager = new UserManager({
   // SPA 是 public client，使用 PKCE 验证，无需 client_secret
   redirect_uri: import.meta.env.VITE_REDIRECT_URI,
   response_type: 'code',
-  scope: 'openid profile',
+  scope: 'openid profile email',
   post_logout_redirect_uri: import.meta.env.VITE_POST_LOGOUT_REDIRECT_URI,
   userStore: new WebStorageStateStore({ store: window.localStorage }),
   automaticSilentRenew: true,
