@@ -120,7 +120,7 @@ const sendCode = async () => {
       if (countdown.value <= 0) clearInterval(timer)
     }, 1000)
   } catch {
-    // 拦截器已自动提示
+    // 拦截器已处理
   }
 }
 
@@ -145,7 +145,7 @@ const handleRegister = async () => {
       router.push('/login')
     }
   } catch {
-    // 拦截器已自动提示
+    // 拦截器已处理
   } finally {
     loading.value = false
   }

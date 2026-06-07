@@ -11,13 +11,13 @@ public class ClientSeeder
     private readonly ApplicationDbContext _context;
     private readonly IOpenIddictApplicationManager _manager;
     private readonly IOpenIddictScopeManager _scopeManager;
-    private readonly UserManager<IdentityUser> _userManager;
+    private readonly UserManager<IdentityUser<Guid>> _userManager;
 
     public ClientSeeder(
         ApplicationDbContext context,
         IOpenIddictApplicationManager manager,
         IOpenIddictScopeManager scopeManager,
-        UserManager<IdentityUser> userManager)
+        UserManager<IdentityUser<Guid>> userManager)
     {
         _context = context;
         _manager = manager;
@@ -87,7 +87,7 @@ public class ClientSeeder
 
             if (await _userManager.FindByEmailAsync(testEmail) == null)
             {
-                var user = new IdentityUser { UserName = testEmail, Email = testEmail };
+                var user = new IdentityUser<Guid> { UserName = testEmail, Email = testEmail };
                 var result = await _userManager.CreateAsync(user, testPassword);
                 if (result.Succeeded)
                 {

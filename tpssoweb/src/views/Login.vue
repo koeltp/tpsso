@@ -26,8 +26,6 @@
         </el-form-item>
       </el-form>
 
-      <p v-if="error" class="error-msg">{{ error }}</p>
-
       <div class="register-link">
         还没有账号？ <router-link :to="{ path: '/register', query: $route.query.returnUrl ? { returnUrl: $route.query.returnUrl } : {} }">立即注册</router-link>
       </div>
@@ -60,7 +58,6 @@ const rules: FormRules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 const loading = ref(false)
-const error = ref('')
 const returnUrl = ref((route.query.returnUrl as string) || '/')
 
 const handleSubmit = async () => {
@@ -68,13 +65,12 @@ const handleSubmit = async () => {
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
 
-  error.value = ''
   loading.value = true
   try {
     await login({ username: form.username, password: form.password })
     window.location.href = returnUrl.value
   } catch {
-    error.value = '用户名或密码错误'
+    // 拦截器已处理
   } finally {
     loading.value = false
   }
@@ -205,14 +201,6 @@ const handleSubmit = async () => {
   color: #333;
   font-size: 24px;
   font-weight: 600;
-}
-
-.error-msg {
-  text-align: center;
-  color: #f56c6c;
-  font-size: 14px;
-  margin-top: -10px;
-  margin-bottom: 16px;
 }
 
 .register-link {

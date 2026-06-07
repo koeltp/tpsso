@@ -12,15 +12,15 @@ namespace TPSSO.Infrastructure.Services;
 /// </summary>
 public class AccountService : IAccountService
 {
-    private readonly SignInManager<IdentityUser> _signInManager;
-    private readonly UserManager<IdentityUser> _userManager;
+    private readonly SignInManager<IdentityUser<Guid>> _signInManager;
+    private readonly UserManager<IdentityUser<Guid>> _userManager;
     private readonly IVerificationCodeService _verificationCodeService;
     private readonly IEmailService _emailService;
     private readonly ILogger<AccountService> _logger;
 
     public AccountService(
-        SignInManager<IdentityUser> signInManager,
-        UserManager<IdentityUser> userManager,
+        SignInManager<IdentityUser<Guid>> signInManager,
+        UserManager<IdentityUser<Guid>> userManager,
         IVerificationCodeService verificationCodeService,
         IEmailService emailService,
         ILogger<AccountService> logger)
@@ -90,7 +90,7 @@ public class AccountService : IAccountService
             return ResponseResult<bool>.BadRequest("验证码无效或已过期");
 
         // 创建用户
-        var user = new IdentityUser
+        var user = new IdentityUser<Guid>
         {
             UserName = model.Username,
             Email = model.Email

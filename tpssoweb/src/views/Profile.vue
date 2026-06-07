@@ -106,7 +106,7 @@ const doLogout = async () => {
   try {
     await logoutApi()
   } catch {
-    // ignore
+    // 拦截器已处理
   }
   userInfo.value = null
   router.push('/')

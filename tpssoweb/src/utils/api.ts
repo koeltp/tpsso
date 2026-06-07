@@ -5,7 +5,7 @@ const api = axios.create({
   timeout: 30000
 })
 
-// 响应拦截器：自动解包 ResponseResult，组件拿到的直接就是 data
+// 响应拦截器：自动解包 ResponseResult，统一弹窗提示错误
 api.interceptors.response.use(
   (response) => {
     const body = response.data

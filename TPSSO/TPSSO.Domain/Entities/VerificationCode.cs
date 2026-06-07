@@ -5,7 +5,7 @@ namespace TPSSO.Domain.Entities;
 /// </summary>
 public class VerificationCode
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; } = Guid.NewGuid();
 
     /// <summary>接收邮箱</summary>
     public string Email { get; set; } = string.Empty;
