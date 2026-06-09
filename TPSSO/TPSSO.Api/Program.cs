@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using OpenIddict.Abstractions;
 using OpenIddict.Validation.AspNetCore;
 using TPSSO.Api.Filters;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Options;
+using TPSSO.Domain.Entities;
 using TPSSO.Infrastructure.Data;
 using TPSSO.Infrastructure.Seeding;
 using TPSSO.Infrastructure.Services;
@@ -23,7 +25,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 });
 
 // 2. Identity 配置
-builder.Services.AddIdentity<IdentityUser<Guid>, IdentityRole<Guid>>()
+builder.Services.AddIdentity<User, Role>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
@@ -36,6 +38,9 @@ builder.Services.Configure<IdentityOptions>(options =>
 });
 
 // 3. Cookie 配置
+// 本项目为 Web API，不应自动重定向到登录页。
+// 将 LoginPath 设为 null 可阻止 Cookie 中间件返回 302 重定向，
+// 使未认证请求直接返回 401 Unauthorized，便于客户端（如 SPA）统一处理。
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = null; // 禁用自动重定向，API 统一返回 401
@@ -53,6 +58,7 @@ builder.Services.AddCors(options =>
 });
 
 // 5. OpenIddict 核心配置
+// TODO 待完善配置
 builder.Services.AddOpenIddict()
     .AddCore(options =>
     {
@@ -86,7 +92,17 @@ builder.Services.AddOpenIddict()
     });
 
 builder.Services.AddAuthentication(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    // 全局默认策略：同时接受 Bearer token 和 Cookie 认证
+    // tpssoadmin 通过 OAuth Bearer token 访问，tpssoweb 通过 Cookie 访问
+    options.DefaultPolicy = new AuthorizationPolicyBuilder()
+        .AddAuthenticationSchemes(
+            OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme,
+            IdentityConstants.ApplicationScheme)
+        .RequireAuthenticatedUser()
+        .Build();
+});
 
 builder.Services.AddControllers(options =>
 {
@@ -100,6 +116,7 @@ builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection(SmtpOpt
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IVerificationCodeService, VerificationCodeService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
+builder.Services.AddScoped<IClientService, ClientService>();
 
 var app = builder.Build();
 
@@ -109,6 +126,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseStaticFiles();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();

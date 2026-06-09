@@ -8,6 +8,7 @@ using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 using System.Security.Claims;
 using TPSSO.Application.Options;
+using TPSSO.Domain.Entities;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace TPSSO.Api.Controllers;
@@ -20,16 +21,16 @@ public class AuthorizationController : ControllerBase
     private readonly IOpenIddictApplicationManager _applicationManager;
     private readonly IOpenIddictAuthorizationManager _authorizationManager;
     private readonly IOpenIddictScopeManager _scopeManager;
-    private readonly SignInManager<IdentityUser> _signInManager;
-    private readonly UserManager<IdentityUser> _userManager;
+    private readonly SignInManager<User> _signInManager;
+    private readonly UserManager<User> _userManager;
     private readonly SsoOptions _ssoOptions;
 
     public AuthorizationController(
         IOpenIddictApplicationManager applicationManager,
         IOpenIddictAuthorizationManager authorizationManager,
         IOpenIddictScopeManager scopeManager,
-        SignInManager<IdentityUser> signInManager,
-        UserManager<IdentityUser> userManager,
+        SignInManager<User> signInManager,
+        UserManager<User> userManager,
         IOptions<SsoOptions> ssoOptions)
     {
         _applicationManager = applicationManager;
@@ -47,7 +48,7 @@ public class AuthorizationController : ControllerBase
     public async Task<IActionResult> Authorize()
     {
         var request = HttpContext.GetOpenIddictServerRequest() ??
-                      throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
+                      throw new InvalidOperationException("无法获取 OpenID Connect 请求。");
 
         // 如果用户尚未登录，重定向到前端登录页面
         if (!User.Identity?.IsAuthenticated == true)

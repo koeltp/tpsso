@@ -64,4 +64,19 @@ docker build -t "${Registry}:tpssoapp" $appDir
 docker push "${Registry}:tpssoapp"
 if ($LASTEXITCODE -ne 0) { exit 1 }
 
+# ============================================================
+# 4. 管理后台（tpssoadmin）
+# ============================================================
+Write-Host "`n========== 构建 Admin ==========" -ForegroundColor Cyan
+$adminDir = Join-Path $ProjectRoot "tpssoadmin"
+
+Push-Location $adminDir
+npm run build
+if ($LASTEXITCODE -ne 0) { Pop-Location; Write-Host "Admin 编译失败" -ForegroundColor Red; exit 1 }
+Pop-Location
+
+docker build -t "${Registry}:tpssoadmin" $adminDir
+docker push "${Registry}:tpssoadmin"
+if ($LASTEXITCODE -ne 0) { exit 1 }
+
 Write-Host "`n所有镜像推送成功" -ForegroundColor Green

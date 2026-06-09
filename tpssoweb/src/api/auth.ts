@@ -4,6 +4,8 @@ export interface UserInfoResult {
   username: string
   email: string
   avatarUrl: string
+  nickName?: string
+  roles: string[]
 }
 
 export interface LoginRequest {
@@ -21,6 +23,16 @@ export interface RegisterRequest {
 export interface SendCodeRequest {
   email: string
   purpose: number
+}
+
+export interface UpdateProfileModel {
+  nickName?: string
+  avatarUrl?: string
+}
+
+export interface ChangePasswordModel {
+  currentPassword: string
+  newPassword: string
 }
 
 /** 登录 */
@@ -46,4 +58,14 @@ export const sendCode = (data: SendCodeRequest): Promise<boolean> => {
 /** 用户注册 */
 export const register = (data: RegisterRequest): Promise<boolean> => {
   return api.post('/api/account/register', data)
+}
+
+/** 修改个人信息 */
+export const updateProfile = (data: UpdateProfileModel): Promise<boolean> => {
+  return api.put('/api/account/profile', data)
+}
+
+/** 修改密码 */
+export const changePassword = (data: ChangePasswordModel): Promise<boolean> => {
+  return api.put('/api/account/password', data)
 }

@@ -1,35 +1,5 @@
 <template>
   <div class="home-container">
-    <nav class="navbar">
-      <div class="navbar-inner">
-        <router-link to="/" class="navbar-brand">
-          <img :src="logoSrc" alt="TPSSO" width="28" height="28" class="navbar-logo" />
-          <span class="navbar-title">SSO</span>
-        </router-link>
-        <div class="navbar-right">
-          <router-link to="/" class="nav-link">首页</router-link>
-          <el-dropdown trigger="click" v-if="userInfo">
-            <span class="user-dropdown">
-              <el-avatar :size="32" class="user-avatar">{{ userInfo.username.charAt(0).toUpperCase() }}</el-avatar>
-              <span class="user-name">{{ userInfo.username }}</span>
-              <el-icon class="dropdown-icon"><ArrowDown /></el-icon>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item @click="goProfile">
-                  <el-icon><User /></el-icon>个人中心
-                </el-dropdown-item>
-                <el-dropdown-item divided @click="doLogout">
-                  <el-icon><SwitchButton /></el-icon>退出
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-          <router-link v-else to="/login" class="nav-link">登录</router-link>
-        </div>
-      </div>
-    </nav>
-
     <div class="hero-section">
       <div class="hero-content">
         <h1 class="hero-title">TPSSO 统一登录</h1>
@@ -132,15 +102,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { Lock, Connection, Monitor, User, Setting, CircleCheck, Odometer, ArrowDown, SwitchButton } from '@element-plus/icons-vue'
-import { getUserInfo, logout as logoutApi } from '@/api/auth'
-import type { UserInfoResult } from '@/api/auth'
-import logoSrc from '@/assets/logo-icon.png'
-
-const router = useRouter()
-
-const userInfo = ref<UserInfoResult | null>(null)
+import { Lock, Connection, Monitor, User, Setting, CircleCheck, Odometer } from '@element-plus/icons-vue'
 
 const stats = ref({
   totalUsers: 0,
@@ -149,15 +111,7 @@ const stats = ref({
   activeClients: 0
 })
 
-onMounted(async () => {
-  // 检查登录状态
-  try {
-    userInfo.value = await getUserInfo()
-  } catch {
-    userInfo.value = null
-  }
-
-  // 模拟数据
+onMounted(() => {
   stats.value = {
     totalUsers: 12846,
     totalClients: 57,
@@ -165,113 +119,12 @@ onMounted(async () => {
     activeClients: 23
   }
 })
-
-const goProfile = () => {
-  router.push('/profile')
-}
-
-const doLogout = async () => {
-  try {
-    await logoutApi()
-  } catch {
-    // 拦截器已处理
-  }
-  userInfo.value = null
-  router.push('/')
-}
 </script>
 
 <style scoped>
 .home-container {
   min-height: 100vh;
   background: white;
-}
-
-.navbar {
-  display: flex;
-  align-items: center;
-  height: 60px;
-  border-bottom: 1px solid #f0f0f0;
-  position: sticky;
-  top: 0;
-  background: white;
-  z-index: 100;
-}
-
-.navbar-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 20px;
-}
-
-.navbar-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
-}
-
-.navbar-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-}
-
-.navbar-right {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-}
-
-.nav-link {
-  font-size: 15px;
-  color: #666;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.nav-link:hover {
-  color: #409eff;
-}
-
-.nav-link.router-link-active {
-  color: #409eff;
-  font-weight: 500;
-}
-
-.user-dropdown {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 8px;
-  transition: background 0.2s;
-}
-
-.user-dropdown:hover {
-  background: #f5f7fa;
-}
-
-.user-avatar {
-  background: #409eff;
-  color: white;
-  font-weight: 600;
-}
-
-.user-name {
-  font-size: 14px;
-  color: #333;
-  font-weight: 500;
-}
-
-.dropdown-icon {
-  font-size: 12px;
-  color: #999;
 }
 
 .hero-section {

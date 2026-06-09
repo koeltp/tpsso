@@ -1,0 +1,76 @@
+<template>
+  <div class="callback-container">
+    <el-icon class="loading-icon" :size="40"><Loading /></el-icon>
+    <p>正在登录...</p>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { Loading } from '@element-plus/icons-vue'
+import { exchangeCodeForToken, getSavedRedirect, setCachedRoles, hasRole } from '@/utils/oauth'
+import { getUserInfo } from '@/api/auth'
+
+const router = useRouter()
+
+onMounted(async () => {
+  const params = new URLSearchParams(window.location.search)
+  const code = params.get('code')
+  const error = params.get('error')
+
+  if (error) {
+    ElMessage.error(params.get('error_description') || '授权失败')
+    router.replace('/login')
+    return
+  }
+
+  if (!code) {
+    ElMessage.error('缺少授权码')
+    router.replace('/login')
+    return
+  }
+
+  try {
+    await exchangeCodeForToken(code)
+
+    // 通过 /api/account/me 获取用户角色并缓存
+    // access_token 是加密的 JWT，前端无法直接解析
+    const userInfo = await getUserInfo()
+    setCachedRoles(userInfo.roles || [])
+
+    if (!hasRole('Admin')) {
+      router.replace('/forbidden')
+      return
+    }
+    const redirect = getSavedRedirect() || '/'
+    router.replace(redirect)
+  } catch (e: any) {
+    ElMessage.error(e.message || '登录失败，请重试')
+    router.replace('/login')
+  }
+})
+</script>
+
+<style scoped>
+.callback-container {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: #666;
+}
+
+.loading-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+</style>

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Taipi.Core.RQRS;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;
+using TPSSO.Domain.Entities;
 
 namespace TPSSO.Infrastructure.Services;
 
@@ -12,15 +13,15 @@ namespace TPSSO.Infrastructure.Services;
 /// </summary>
 public class AccountService : IAccountService
 {
-    private readonly SignInManager<IdentityUser<Guid>> _signInManager;
-    private readonly UserManager<IdentityUser<Guid>> _userManager;
+    private readonly SignInManager<User> _signInManager;
+    private readonly UserManager<User> _userManager;
     private readonly IVerificationCodeService _verificationCodeService;
     private readonly IEmailService _emailService;
     private readonly ILogger<AccountService> _logger;
 
     public AccountService(
-        SignInManager<IdentityUser<Guid>> signInManager,
-        UserManager<IdentityUser<Guid>> userManager,
+        SignInManager<User> signInManager,
+        UserManager<User> userManager,
         IVerificationCodeService verificationCodeService,
         IEmailService emailService,
         ILogger<AccountService> logger)
@@ -61,10 +62,64 @@ public class AccountService : IAccountService
         {
             Username = user.UserName ?? "",
             Email = user.Email ?? "",
-            AvatarUrl = ""
+            AvatarUrl = user.AvatarUrl ?? "",
+            NickName = user.NickName,
+            Roles = (await _userManager.GetRolesAsync(user)).ToList()
         };
 
         return new ResponseResult<UserInfoResult>(data) { Code = 200, Message = "获取成功" };
+    }
+
+    public async Task<ResponseResult<bool>> UpdateProfileAsync(ClaimsPrincipal principal, UpdateProfileModel model)
+    {
+        if (principal.Identity?.IsAuthenticated != true)
+            return ResponseResult<bool>.Unauthorized("未登录");
+
+        var user = await _userManager.GetUserAsync(principal);
+        if (user == null)
+            return ResponseResult<bool>.NotFound("用户不存在");
+
+        user.NickName = model.NickName;
+        user.AvatarUrl = model.AvatarUrl;
+
+        var result = await _userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+            return ResponseResult<bool>.BadRequest(string.Join("；", result.Errors.Select(e => e.Description)));
+
+        return ResponseResult<bool>.Success("修改成功");
+    }
+
+    public async Task<ResponseResult<bool>> ChangePasswordAsync(ClaimsPrincipal principal, ChangePasswordModel model)
+    {
+        if (principal.Identity?.IsAuthenticated != true)
+            return ResponseResult<bool>.Unauthorized("未登录");
+
+        var user = await _userManager.GetUserAsync(principal);
+        if (user == null)
+            return ResponseResult<bool>.NotFound("用户不存在");
+
+        var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+        if (!result.Succeeded)
+            return ResponseResult<bool>.BadRequest(string.Join("；", result.Errors.Select(e => e.Description)));
+
+        return ResponseResult<bool>.Success("密码修改成功");
+    }
+
+    public async Task<ResponseResult<string>> UpdateAvatarUrlAsync(ClaimsPrincipal principal, string avatarUrl)
+    {
+        if (principal.Identity?.IsAuthenticated != true)
+            return ResponseResult<string>.Unauthorized("未登录");
+
+        var user = await _userManager.GetUserAsync(principal);
+        if (user == null)
+            return ResponseResult<string>.NotFound("用户不存在");
+
+        user.AvatarUrl = avatarUrl;
+        var result = await _userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+            return ResponseResult<string>.BadRequest(string.Join("；", result.Errors.Select(e => e.Description)));
+
+        return new ResponseResult<string>(avatarUrl) { Code = 200, Message = "上传成功" };
     }
 
     public async Task<ResponseResult<bool>> SendCodeAsync(SendCodeModel model)
@@ -90,7 +145,7 @@ public class AccountService : IAccountService
             return ResponseResult<bool>.BadRequest("验证码无效或已过期");
 
         // 创建用户
-        var user = new IdentityUser<Guid>
+        var user = new User
         {
             UserName = model.Username,
             Email = model.Email

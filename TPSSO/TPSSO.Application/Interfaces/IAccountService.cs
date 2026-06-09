@@ -25,6 +25,21 @@ public interface IAccountService
     Task<ResponseResult<UserInfoResult>> GetCurrentUserAsync(ClaimsPrincipal principal);
 
     /// <summary>
+    /// 修改个人信息
+    /// </summary>
+    Task<ResponseResult<bool>> UpdateProfileAsync(ClaimsPrincipal principal, UpdateProfileModel model);
+
+    /// <summary>
+    /// 更新用户头像 URL
+    /// </summary>
+    Task<ResponseResult<string>> UpdateAvatarUrlAsync(ClaimsPrincipal principal, string avatarUrl);
+
+    /// <summary>
+    /// 修改密码
+    /// </summary>
+    Task<ResponseResult<bool>> ChangePasswordAsync(ClaimsPrincipal principal, ChangePasswordModel model);
+
+    /// <summary>
     /// 发送验证码邮件
     /// </summary>
     Task<ResponseResult<bool>> SendCodeAsync(SendCodeModel model);

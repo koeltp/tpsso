@@ -4,8 +4,19 @@ import type { RouteRecordRaw } from 'vue-router'
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    name: 'Home',
-    component: () => import('@/views/Home.vue')
+    component: () => import('@/layouts/Layout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'Home',
+        component: () => import('@/views/Home.vue')
+      },
+      {
+        path: 'profile',
+        name: 'Profile',
+        component: () => import('@/views/Profile.vue')
+      }
+    ]
   },
   {
     path: '/login',
@@ -23,9 +34,14 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/Authorize.vue')
   },
   {
-    path: '/profile',
-    name: 'Profile',
-    component: () => import('@/views/Profile.vue')
+    path: '/client/register',
+    name: 'ClientRegister',
+    component: () => import('@/views/ClientRegister.vue')
+  },
+  {
+    path: '/my-clients',
+    name: 'MyClients',
+    component: () => import('@/views/MyClients.vue')
   }
 ]
 
