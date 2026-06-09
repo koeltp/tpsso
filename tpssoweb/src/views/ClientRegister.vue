@@ -5,9 +5,6 @@
     <div class="bubble bubble-3"></div>
 
     <div class="client-register-box">
-      <router-link to="/" class="home-icon" title="返回首页">
-        <el-icon><HomeFilled /></el-icon>
-      </router-link>
       <h1 class="title">创建客户端应用</h1>
 
       <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="handleCreate">
@@ -92,7 +89,6 @@ import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { HomeFilled } from '@element-plus/icons-vue'
 import { createClient, type ClientCreatedResult } from '@/api/client'
 
 const router = useRouter()
@@ -218,27 +214,6 @@ const handleSecretSaved = () => {
 @keyframes float {
   0%, 100% { transform: translateY(0) scale(1); }
   50% { transform: translateY(-20px) scale(1.05); }
-}
-
-.home-icon {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  color: #999;
-  text-decoration: none;
-  border-radius: 8px;
-  transition: all 0.3s;
-  z-index: 1;
-}
-
-.home-icon:hover {
-  color: #409eff;
-  background: #f0f5ff;
 }
 
 .client-register-box {

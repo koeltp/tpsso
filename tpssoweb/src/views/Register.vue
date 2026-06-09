@@ -163,6 +163,7 @@ const handleRegister = async () => {
   position: relative;
   overflow: hidden;
   padding: 40px 20px;
+  box-sizing: border-box;
 }
 
 .register-container::before {

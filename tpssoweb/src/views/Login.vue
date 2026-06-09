@@ -7,6 +7,9 @@
     <div class="bubble bubble-5"></div>
 
     <div class="login-box">
+      <router-link to="/" class="home-icon" title="返回首页">
+        <el-icon><HomeFilled /></el-icon>
+      </router-link>
       <div class="logo-area">
         <img :src="logoSrc" alt="TPSSO" class="logo-img" />
       </div>
@@ -30,10 +33,6 @@
         还没有账号？ <router-link :to="{ path: '/register', query: $route.query.returnUrl ? { returnUrl: $route.query.returnUrl } : {} }">立即注册</router-link>
       </div>
 
-      <div class="admin-link">
-        <el-icon style="margin-right: 4px; vertical-align: middle;" :size="14"><UserFilled /></el-icon>
-        <a href="https://ssoadmin.taipi.top" target="_blank">管理员登录</a>
-      </div>
     </div>
   </div>
 </template>
@@ -41,7 +40,7 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
 import { useRoute } from 'vue-router'
-import { User, Lock, UserFilled } from '@element-plus/icons-vue'
+import { User, Lock, HomeFilled } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { login } from '@/api/auth'
 import { useUserStore } from '@/stores/user'
@@ -90,6 +89,7 @@ const handleSubmit = async () => {
   background: linear-gradient(135deg, #f0f5ff 0%, #e8f0fe 50%, #f5f0ff 100%);
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .login-container::before {
@@ -187,6 +187,27 @@ const handleSubmit = async () => {
   z-index: 1;
 }
 
+.home-icon {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  color: #999;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: all 0.3s;
+  z-index: 1;
+}
+
+.home-icon:hover {
+  color: #409eff;
+  background: #f0f5ff;
+}
+
 .logo-area {
   text-align: center;
   margin-bottom: 8px;
@@ -219,23 +240,6 @@ const handleSubmit = async () => {
 }
 
 .register-link a:hover {
-  text-decoration: underline;
-}
-
-.admin-link {
-  text-align: center;
-  margin-top: 20px;
-  color: #999;
-  font-size: 14px;
-}
-
-.admin-link a {
-  color: #999;
-  text-decoration: none;
-}
-
-.admin-link a:hover {
-  color: #409eff;
   text-decoration: underline;
 }
 </style>
