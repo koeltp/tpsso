@@ -28,7 +28,10 @@ var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<Jw
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
-    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), mysql =>
+    {
+        mysql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+    });
     options.UseOpenIddict();
 });
 
