@@ -11,7 +11,7 @@
           <router-link v-if="userInfo" to="/my-clients" class="nav-link">我的客户端</router-link>
           <el-dropdown trigger="click" v-if="userInfo">
             <span class="user-dropdown">
-              <el-avatar :size="32" :src="userInfo.avatarUrl || undefined" class="user-avatar">{{ !userInfo.avatarUrl ? userInfo.username.charAt(0).toUpperCase() : '' }}</el-avatar>
+              <el-avatar :size="32" :src="userInfo.avatarUrl || undefined" class="user-avatar" :class="{'has-avator':userInfo.avatarUrl}">{{ !userInfo.avatarUrl ? userInfo.username.charAt(0).toUpperCase() : '' }}</el-avatar>
               <span class="user-name">{{ userInfo.nickName || userInfo.username }}</span>
               <el-icon class="dropdown-icon"><ArrowDown /></el-icon>
             </span>
@@ -140,9 +140,13 @@ const doLogout = async () => {
 }
 
 .user-avatar {
-  background: #409eff;
+  
   color: white;
   font-weight: 600;
+}
+
+.user-avatar:not(.has-avator) {
+  background: orange;
 }
 
 .user-name {

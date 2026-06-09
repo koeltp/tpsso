@@ -15,6 +15,16 @@ const routes: RouteRecordRaw[] = [
         path: 'profile',
         name: 'Profile',
         component: () => import('@/views/Profile.vue')
+      },
+      {
+        path: 'my-clients',
+        name: 'MyClients',
+        component: () => import('@/views/MyClients.vue')
+      },
+      {
+        path: 'client/register',
+        name: 'ClientRegister',
+        component: () => import('@/views/ClientRegister.vue')
       }
     ]
   },
@@ -32,16 +42,6 @@ const routes: RouteRecordRaw[] = [
     path: '/authorize',
     name: 'Authorize',
     component: () => import('@/views/Authorize.vue')
-  },
-  {
-    path: '/client/register',
-    name: 'ClientRegister',
-    component: () => import('@/views/ClientRegister.vue')
-  },
-  {
-    path: '/my-clients',
-    name: 'MyClients',
-    component: () => import('@/views/MyClients.vue')
   }
 ]
 

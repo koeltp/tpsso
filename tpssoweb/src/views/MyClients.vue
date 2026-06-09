@@ -39,11 +39,7 @@
           <el-descriptions-item label="类型">
             {{ client.isPublic ? '公开客户端' : '机密客户端' }}
           </el-descriptions-item>
-          <el-descriptions-item label="回调地址" :span="2">
-            <div v-for="uri in client.redirectUris.split('\n')" :key="uri" class="redirect-uri">
-              {{ uri }}
-            </div>
-          </el-descriptions-item>
+          
           <el-descriptions-item label="授权范围">
             <el-tag v-for="scope in client.allowedScopes.split(' ')" :key="scope" size="small" style="margin-right: 4px">
               {{ scope }}
@@ -54,6 +50,11 @@
           </el-descriptions-item>
           <el-descriptions-item v-if="client.reviewRemark" label="审核备注" :span="2">
             <span style="color: #f56c6c">{{ client.reviewRemark }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="回调地址" :span="2">
+            <div v-for="(uri, index) in client.redirectUris.split('\n')" :key="`${uri}-${index}`" class="redirect-uri">
+              {{ uri }}
+            </div>
           </el-descriptions-item>
         </el-descriptions>
       </el-card>
