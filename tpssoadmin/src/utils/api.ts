@@ -2,7 +2,15 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/stores/user'
 
+/** 后端统一响应格式 */
+interface ResponseResult<T = unknown> {
+  code: number
+  message?: string
+  data?: T
+}
+
 const api = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || '',
   timeout: 30000
 })
 
@@ -25,14 +33,14 @@ api.interceptors.response.use(
       return body
     }
 
-    const { code, message } = body as { code: number; message?: string; data?: unknown }
+    const { code, message, data } = body as ResponseResult
 
     if (code !== 200) {
       ElMessage.error(message || '请求失败')
       return Promise.reject(new Error(message))
     }
 
-    return (body as any).data ?? body
+    return data ?? body
   },
   async (error) => {
     const originalRequest = error.config
@@ -41,7 +49,6 @@ api.interceptors.response.use(
       const userStore = useUserStore()
 
       if (!userStore.refreshToken) {
-        // 没有 Refresh Token，直接退出
         userStore.logout()
         return Promise.reject(error)
       }
@@ -55,7 +62,7 @@ api.interceptors.response.use(
         return api(originalRequest)
       }
 
-      // 刷新失败，logout 内部会 clearAuth 并跳转
+      // 刷新失败，logout 内部会 clearAuth 并跳转登录页
       userStore.logout()
       return Promise.reject(error)
     }
@@ -63,7 +70,10 @@ api.interceptors.response.use(
     if (!error.response) {
       ElMessage.error('网络连接失败，请检查网络')
     } else if (error.response?.status !== 401) {
-      ElMessage.error(error.response?.data?.message || '网络错误')
+      // 后端错误响应也遵循 { code, message, data } 格式
+      const errorData = error.response.data as ResponseResult | undefined
+      const message = errorData?.message || '网络错误'
+      ElMessage.error(message)
     }
 
     return Promise.reject(error)
@@ -71,3 +81,4 @@ api.interceptors.response.use(
 )
 
 export default api
+export type { ResponseResult }
