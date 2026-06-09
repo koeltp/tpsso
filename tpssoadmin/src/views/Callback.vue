@@ -35,6 +35,11 @@ onMounted(async () => {
 
   try {
     await exchangeCodeForToken(code)
+    // 同步 store 中的 token（exchangeCodeForToken 写了 localStorage）
+    const accessToken = userStore.token || localStorage.getItem('admin_access_token')
+    if (accessToken) {
+      userStore.setAuth(accessToken, localStorage.getItem('admin_refresh_token') ?? undefined)
+    }
     await userStore.fetchUserInfo()
 
     if (!userStore.isAdmin) {

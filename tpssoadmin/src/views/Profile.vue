@@ -64,7 +64,6 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, type FormInstance, type FormRules, type UploadProps } from 'element-plus'
 import { updateProfile, changePassword, type UpdateProfileModel, type ChangePasswordModel } from '@/api/auth'
-import { getAccessToken } from '@/utils/oauth'
 import { useUserStore } from '@/stores/user'
 
 const activeTab = ref('info')
@@ -83,7 +82,7 @@ const passwordLoading = ref(false)
 
 // tpssoadmin 用 Bearer token 认证
 const uploadHeaders = computed(() => {
-  const token = getAccessToken()
+  const token = userStore.token
   return token ? { Authorization: `Bearer ${token}` } : {}
 })
 

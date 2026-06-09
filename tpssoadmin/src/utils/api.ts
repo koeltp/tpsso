@@ -1,16 +1,16 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import { getAccessToken, refreshAccessToken, logoutOAuth } from '@/utils/oauth'
+import { useUserStore } from '@/stores/user'
 
 const api = axios.create({
   timeout: 30000
 })
 
-// 请求拦截器：自动附加 Bearer token
+// 请求拦截器：从 store 读取 token
 api.interceptors.request.use((config) => {
-  const token = getAccessToken()
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+  const userStore = useUserStore()
+  if (userStore.token) {
+    config.headers.Authorization = `Bearer ${userStore.token}`
   }
   return config
 })
@@ -47,6 +47,14 @@ api.interceptors.response.use(
     const originalRequest = error.config
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      const userStore = useUserStore()
+
+      if (!userStore.refreshToken) {
+        userStore.clearAuth()
+        userStore.logout()
+        return Promise.reject(error)
+      }
+
       if (isRefreshing) {
         // 正在刷新，将请求排队等待
         return new Promise((resolve) => {
@@ -61,7 +69,7 @@ api.interceptors.response.use(
       isRefreshing = true
 
       try {
-        const newToken = await refreshAccessToken()
+        const newToken = await userStore.refreshAccessToken()
         if (newToken) {
           onTokenRefreshed(newToken)
           originalRequest.headers.Authorization = `Bearer ${newToken}`
@@ -74,7 +82,8 @@ api.interceptors.response.use(
       }
 
       // 刷新失败，退出登录
-      logoutOAuth()
+      userStore.clearAuth()
+      userStore.logout()
       return Promise.reject(error)
     }
 

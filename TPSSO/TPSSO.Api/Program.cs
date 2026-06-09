@@ -99,7 +99,25 @@ builder.Services.AddOpenIddict()
         options.UseAspNetCore();
     });
 
-builder.Services.AddAuthentication(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
+builder.Services.AddAuthentication("SmartScheme")
+    .AddPolicyScheme("SmartScheme", "SmartScheme", options =>
+    {
+        // 根据 Authorization 头自动选择认证方案
+        // JWT Token（三段式）走 JwtBearer，其他（OAuth Token / Cookie）走 OpenIddict
+        options.ForwardDefaultSelector = context =>
+        {
+            var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
+            if (authHeader?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                var token = authHeader.Substring("Bearer ".Length).Trim();
+                if (token.Split('.').Length == 3)
+                {
+                    return JwtBearerDefaults.AuthenticationScheme;
+                }
+            }
+            return OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
+        };
+    })
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters

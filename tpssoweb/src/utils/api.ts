@@ -1,15 +1,16 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
 
 const api = axios.create({
   timeout: 30000
 })
 
-// 请求拦截器：自动携带 JWT Token
+// 请求拦截器：从 store 读取 JWT Token
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+  const userStore = useUserStore()
+  if (userStore.token) {
+    config.headers.Authorization = `Bearer ${userStore.token}`
   }
   return config
 })
@@ -47,11 +48,12 @@ api.interceptors.response.use(
     const originalRequest = error.config
 
     if (error.response?.status === 401 && !originalRequest._retry) {
-      const storedRefreshToken = localStorage.getItem('refreshToken')
+      const userStore = useUserStore()
 
-      if (!storedRefreshToken) {
+      if (!userStore.refreshToken) {
         // 没有 Refresh Token，直接跳登录
-        clearAuthAndRedirect()
+        userStore.clearAuth()
+        redirectToLogin()
         return Promise.reject(error)
       }
 
@@ -69,25 +71,23 @@ api.interceptors.response.use(
       isRefreshing = true
 
       try {
-        // 用独立的 axios 实例刷新，避免触发拦截器循环
-        const res = await axios.post('/api/account/refresh', { refreshToken: storedRefreshToken })
-        const result = res.data?.data ?? res.data
-
+        const result = await userStore.refreshAccessToken()
         if (result?.token) {
-          localStorage.setItem('token', result.token)
-          localStorage.setItem('refreshToken', result.refreshToken)
           onTokenRefreshed(result.token)
 
           originalRequest.headers.Authorization = `Bearer ${result.token}`
           return api(originalRequest)
         }
       } catch {
-        // 刷新失败，彻底退出
-        clearAuthAndRedirect()
-        return Promise.reject(error)
+        // 刷新失败
       } finally {
         isRefreshing = false
       }
+
+      // 刷新失败，彻底退出
+      userStore.clearAuth()
+      redirectToLogin()
+      return Promise.reject(error)
     }
 
     if (!error.response) {
@@ -100,9 +100,7 @@ api.interceptors.response.use(
   }
 )
 
-function clearAuthAndRedirect() {
-  localStorage.removeItem('token')
-  localStorage.removeItem('refreshToken')
+function redirectToLogin() {
   if (window.location.pathname !== '/login') {
     const returnUrl = encodeURIComponent(window.location.pathname + window.location.search)
     window.location.href = `/login?returnUrl=${returnUrl}`

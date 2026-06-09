@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
-import { isAuthenticated, hasRole, startOAuthLogin } from '@/utils/oauth'
+import { startOAuthLogin } from '@/utils/oauth'
+import { useUserStore } from '@/stores/user'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -63,11 +64,12 @@ const router = createRouter({
 router.beforeEach((to) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   if (requiresAuth) {
-    if (!isAuthenticated()) {
+    const userStore = useUserStore()
+    if (!userStore.isAuthenticated) {
       startOAuthLogin(to.fullPath)
       return false
     }
-    if (!hasRole('Admin')) {
+    if (!userStore.isAdmin) {
       return { name: 'Forbidden' }
     }
   }

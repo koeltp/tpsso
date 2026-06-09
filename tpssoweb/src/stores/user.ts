@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, readonly } from 'vue'
 import { getUserInfo, refreshToken as refreshTokenApi, logout as logoutApi, type LoginResult, type UserInfoResult } from '@/api/auth'
 
 const TOKEN_KEY = 'token'
@@ -57,7 +57,6 @@ export const useUserStore = defineStore('user', () => {
         return result
       })
       .catch(() => {
-        // Refresh Token 也过期了，彻底退出
         clearAuth()
         return null
       })
@@ -78,5 +77,29 @@ export const useUserStore = defineStore('user', () => {
     clearAuth()
   }
 
-  return { token, refreshToken, userInfo, isAuthenticated, setAuth, clearAuth, fetchUserInfo, refreshAccessToken, logout }
+  // 多标签页同步：其他标签页修改 localStorage 时只更新内存状态，避免级联触发 storage 事件
+  window.addEventListener('storage', (e) => {
+    if (e.key === TOKEN_KEY) {
+      token.value = e.newValue
+      if (!e.newValue) {
+        refreshToken.value = null
+        userInfo.value = null
+      }
+    }
+    if (e.key === REFRESH_TOKEN_KEY) {
+      refreshToken.value = e.newValue
+    }
+  })
+
+  return {
+    token: readonly(token),
+    refreshToken: readonly(refreshToken),
+    userInfo: readonly(userInfo),
+    isAuthenticated,
+    setAuth,
+    clearAuth,
+    fetchUserInfo,
+    refreshAccessToken,
+    logout
+  }
 })
