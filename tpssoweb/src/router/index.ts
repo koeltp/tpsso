@@ -49,6 +49,12 @@ const routes: RouteRecordRaw[] = [
     name: 'Authorize',
     component: () => import('@/views/Authorize.vue'),
     meta: { title: '授权' }
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/views/NotFound.vue'),
+    meta: { title: '页面未找到' }
   }
 ]
 

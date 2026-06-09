@@ -22,6 +22,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false }
   },
   {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('@/views/NotFound.vue'),
+    meta: { requiresAuth: false }
+  },
+  {
     path: '/',
     component: () => import('@/layouts/Layout.vue'),
     meta: { requiresAuth: true },
@@ -33,8 +39,8 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: 'clients',
-        name: 'AllClients',
-        component: () => import('@/views/AllClients.vue')
+        name: 'Clients',
+        component: () => import('@/views/Client.vue')
       },
       {
         path: 'profile',
