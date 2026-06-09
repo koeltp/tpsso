@@ -102,7 +102,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Lock, Connection, Monitor, User, Setting, CircleCheck, Odometer } from '@element-plus/icons-vue'
+import { Lock, Connection, Monitor, User, Setting, CircleCheck, Odometer,Key } from '@element-plus/icons-vue'
 
 const stats = ref({
   totalUsers: 0,

@@ -31,7 +31,7 @@
       </div>
     </nav>
 
-    <slot />
+    <router-view />
   </div>
 </template>
 
