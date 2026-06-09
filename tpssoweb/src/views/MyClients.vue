@@ -95,6 +95,7 @@ import {
   updateClient,
   type ClientResult
 } from '@/api/client'
+import { statusTagType, statusLabel, formatDate } from '@/utils/client'
 
 const router = useRouter()
 const loading = ref(false)
@@ -191,30 +192,6 @@ const handleUpdate = async () => {
   } finally {
     editLoading.value = false
   }
-}
-
-const statusTagType = (status: string) => {
-  switch (status) {
-    case 'Draft': return 'info'
-    case 'Pending': return 'warning'
-    case 'Approved': return 'success'
-    case 'Rejected': return 'danger'
-    default: return 'info'
-  }
-}
-
-const statusLabel = (status: string) => {
-  switch (status) {
-    case 'Draft': return '草稿'
-    case 'Pending': return '待审核'
-    case 'Approved': return '已通过'
-    case 'Rejected': return '已拒绝'
-    default: return status
-  }
-}
-
-const formatDate = (dateStr: string) => {
-  return new Date(dateStr).toLocaleString('zh-CN')
 }
 
 onMounted(fetchClients)

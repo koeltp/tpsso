@@ -10,7 +10,7 @@ import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
-import { exchangeCodeForToken, getSavedRedirect } from '@/utils/oauth'
+import { getSavedRedirect } from '@/utils/oauth'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
@@ -34,12 +34,8 @@ onMounted(async () => {
   }
 
   try {
-    await exchangeCodeForToken(code)
-    // 同步 store 中的 token（exchangeCodeForToken 写了 localStorage）
-    const accessToken = userStore.token || localStorage.getItem('admin_access_token')
-    if (accessToken) {
-      userStore.setAuth(accessToken, localStorage.getItem('admin_refresh_token') ?? undefined)
-    }
+    // 通过 Store 统一处理授权码交换和 Token 存储
+    await userStore.handleCallback(code)
     await userStore.fetchUserInfo()
 
     if (!userStore.isAdmin) {

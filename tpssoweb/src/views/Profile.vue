@@ -132,9 +132,9 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
 const handleAvatarSuccess: UploadProps['onSuccess'] = (response) => {
   if (response.code === 200 && response.data) {
     profileForm.avatarUrl = response.data
-    if (userStore.userInfo) {
-      userStore.userInfo.avatarUrl = response.data
-    }
+    userStore.updateUserInfo({
+      avatarUrl: response.data
+    })
     ElMessage.success('头像上传成功')
   } else {
     ElMessage.error(response.message || '上传失败')
@@ -146,10 +146,10 @@ const handleUpdateProfile = async () => {
   try {
     await updateProfile(profileForm)
     ElMessage.success('修改成功')
-    if (userStore.userInfo) {
-      userStore.userInfo.nickName = profileForm.nickName
-      userStore.userInfo.avatarUrl = profileForm.avatarUrl ?? ''
-    }
+    userStore.updateUserInfo({
+      nickName: profileForm.nickName,
+      avatarUrl: profileForm.avatarUrl ?? ''
+    })
   } catch {
     // 拦截器已处理
   } finally {

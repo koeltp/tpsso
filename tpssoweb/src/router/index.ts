@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { useUserStore } from '@/stores/user'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -16,19 +17,19 @@ const routes: RouteRecordRaw[] = [
         path: 'profile',
         name: 'Profile',
         component: () => import('@/views/Profile.vue'),
-        meta: { title: '个人中心' }
+        meta: { title: '个人中心', requiresAuth: true }
       },
       {
         path: 'my-clients',
         name: 'MyClients',
         component: () => import('@/views/MyClients.vue'),
-        meta: { title: '我的客户端' }
+        meta: { title: '我的客户端', requiresAuth: true }
       },
       {
         path: 'client/register',
         name: 'ClientRegister',
         component: () => import('@/views/ClientRegister.vue'),
-        meta: { title: '创建客户端应用' }
+        meta: { title: '创建客户端应用', requiresAuth: true }
       }
     ]
   },
@@ -71,6 +72,14 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   document.title = `${to.meta.title || 'TPSSO'} - TPSSO`
+
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  if (requiresAuth) {
+    const userStore = useUserStore()
+    if (!userStore.isAuthenticated) {
+      return { name: 'Login', query: { returnUrl: to.fullPath } }
+    }
+  }
 })
 
 export default router

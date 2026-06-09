@@ -25,7 +25,7 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { User, Lock } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { login } from '@/api/auth'
@@ -33,6 +33,7 @@ import { useUserStore } from '@/stores/user'
 import logoSrc from '@/assets/logo.png'
 
 const route = useRoute()
+const router = useRouter()
 const userStore = useUserStore()
 
 const formRef = ref<FormInstance>()
@@ -56,7 +57,12 @@ const handleSubmit = async () => {
   try {
     const result = await login({ username: form.username, password: form.password })
     userStore.setAuth(result)
-    window.location.href = returnUrl.value
+    // 后端授权端点或外部URL需要整页跳转，前端路由用router.push
+    if (returnUrl.value.startsWith('http') || returnUrl.value.startsWith('/connect/')) {
+      window.location.href = returnUrl.value
+    } else {
+      router.push(returnUrl.value)
+    }
   } catch {
     // 拦截器已处理
   } finally {

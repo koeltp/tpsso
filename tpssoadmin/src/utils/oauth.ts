@@ -1,15 +1,15 @@
 /**
  * OAuth 2.0 + PKCE 工具
  * tpssoadmin 作为标准 OAuth 客户端接入 SSO
+ *
+ * 职责：仅负责 OAuth 协议交互（PKCE 生成、授权码交换、Token 刷新）
+ * Token 的存储和读取由 Pinia Store 统一管理，本模块不直接操作 localStorage
  */
 
 const CLIENT_ID = import.meta.env.VITE_OAUTH_CLIENT_ID || 'tpsso_admin_client'
 const SCOPES = import.meta.env.VITE_OAUTH_SCOPE || 'openid profile email roles'
-const TOKEN_KEY = 'admin_access_token'
-const REFRESH_TOKEN_KEY = 'admin_refresh_token'
 const CODE_VERIFIER_KEY = 'admin_code_verifier'
 const REDIRECT_KEY = 'admin_redirect'
-const ROLES_KEY = 'admin_roles'
 
 /** 生成随机字符串 */
 function randomString(length: number): string {
@@ -54,8 +54,8 @@ export async function startOAuthLogin(redirectPath?: string): Promise<void> {
   window.location.href = `/connect/authorize?${params.toString()}`
 }
 
-/** 用授权码换 token */
-export async function exchangeCodeForToken(code: string): Promise<void> {
+/** 用授权码换 token，返回 Token 数据（不直接写 localStorage） */
+export async function exchangeCodeForToken(code: string): Promise<{ accessToken: string; refreshToken?: string }> {
   const verifier = sessionStorage.getItem(CODE_VERIFIER_KEY)
   if (!verifier) {
     throw new Error('缺少 code_verifier，请重新登录')
@@ -81,97 +81,41 @@ export async function exchangeCodeForToken(code: string): Promise<void> {
   }
 
   const data = await response.json()
-  setTokens(data.access_token, data.refresh_token)
   sessionStorage.removeItem(CODE_VERIFIER_KEY)
+
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token
+  }
 }
 
-/** 使用 Refresh Token 刷新 Access Token */
-export async function refreshAccessToken(): Promise<string | null> {
-  const refreshTokenValue = localStorage.getItem(REFRESH_TOKEN_KEY)
-  if (!refreshTokenValue) return null
-
+/** 使用 Refresh Token 刷新 Access Token，返回新 Token 数据（不直接写 localStorage） */
+export async function refreshAccessToken(currentRefreshToken: string): Promise<{ accessToken: string; refreshToken?: string } | null> {
   const params = new URLSearchParams({
     grant_type: 'refresh_token',
-    refresh_token: refreshTokenValue,
+    refresh_token: currentRefreshToken,
     client_id: CLIENT_ID
   })
 
-  try {
-    const response = await fetch('/connect/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: params.toString()
-    })
+  const response = await fetch('/connect/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString()
+  })
 
-    if (!response.ok) {
-      clearTokens()
-      return null
-    }
-
-    const data = await response.json()
-    setTokens(data.access_token, data.refresh_token)
-    return data.access_token
-  } catch {
-    clearTokens()
+  if (!response.ok) {
     return null
   }
-}
 
-/** 设置 token 到 localStorage */
-export function setTokens(accessToken: string, refreshToken?: string): void {
-  localStorage.setItem(TOKEN_KEY, accessToken)
-  if (refreshToken) {
-    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+  const data = await response.json()
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token
   }
 }
 
-/** 清除所有认证信息 */
-export function clearTokens(): void {
-  localStorage.removeItem(TOKEN_KEY)
-  localStorage.removeItem(REFRESH_TOKEN_KEY)
-  localStorage.removeItem(ROLES_KEY)
-  sessionStorage.removeItem(CODE_VERIFIER_KEY)
-}
-
-/** 获取 access token */
-export function getAccessToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY)
-}
-
-/** 获取 refresh token */
-export function getRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_TOKEN_KEY)
-}
-
-/** 缓存用户角色 */
-export function setCachedRoles(roles: string[]): void {
-  localStorage.setItem(ROLES_KEY, JSON.stringify(roles))
-}
-
-/** 获取缓存的角色 */
-export function getCachedRoles(): string[] {
-  const raw = localStorage.getItem(ROLES_KEY)
-  if (!raw) return []
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return []
-  }
-}
-
-/** 检查当前用户是否拥有指定角色 */
-export function hasRole(role: string): boolean {
-  return getCachedRoles().includes(role)
-}
-
-/** 是否已登录 */
-export function isAuthenticated(): boolean {
-  return !!getAccessToken()
-}
-
-/** 退出登录 */
+/** 跳转到 SSO 登出页面 */
 export function logoutOAuth(): void {
-  clearTokens()
   window.location.href = '/connect/logout?post_logout_redirect_uri=' + encodeURIComponent(window.location.origin)
 }
 

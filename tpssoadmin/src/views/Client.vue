@@ -67,8 +67,11 @@ import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import { getAllClients, deleteClient, approveClient, rejectClient, type ClientResult } from '@/api/client'
+import { statusTagType, statusLabel, formatDate } from '@/utils/client'
+import { useClientStore } from '@/stores/client'
 
 const route = useRoute()
+const clientStore = useClientStore()
 const loading = ref(false)
 const clients = ref<ClientResult[]>([])
 
@@ -97,6 +100,7 @@ const handleApprove = async (id: string) => {
     await approveClient(id)
     ElMessage.success('审核通过')
     fetchClients()
+    clientStore.fetchPendingCount()
   } catch {
     // 拦截器已处理或用户取消
   }
@@ -128,6 +132,7 @@ const confirmReject = async () => {
     ElMessage.success('已拒绝')
     rejectDialogVisible.value = false
     fetchClients()
+    clientStore.fetchPendingCount()
   } catch {
     // 拦截器已处理
   } finally {
@@ -144,30 +149,6 @@ const handleDelete = async (id: string) => {
   } catch {
     // 拦截器已处理或用户取消
   }
-}
-
-const statusTagType = (status: string) => {
-  switch (status) {
-    case 'Draft': return 'info'
-    case 'Pending': return 'warning'
-    case 'Approved': return 'success'
-    case 'Rejected': return 'danger'
-    default: return 'info'
-  }
-}
-
-const statusLabel = (status: string) => {
-  switch (status) {
-    case 'Draft': return '草稿'
-    case 'Pending': return '待审核'
-    case 'Approved': return '已通过'
-    case 'Rejected': return '已拒绝'
-    default: return status
-  }
-}
-
-const formatDate = (dateStr: string) => {
-  return new Date(dateStr).toLocaleString('zh-CN')
 }
 
 onMounted(fetchClients)

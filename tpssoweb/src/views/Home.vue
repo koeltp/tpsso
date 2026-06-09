@@ -24,39 +24,6 @@
       </div>
     </div>
 
-    <div class="stats-section">
-      <div class="stats-container">
-        <div class="stat-card">
-          <el-icon class="stat-icon" color="#409eff"><User /></el-icon>
-          <div class="stat-content">
-            <span class="stat-value">{{ stats.totalUsers }}</span>
-            <span class="stat-label">注册用户</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <el-icon class="stat-icon" color="#67c23a"><Monitor /></el-icon>
-          <div class="stat-content">
-            <span class="stat-value">{{ stats.totalClients }}</span>
-            <span class="stat-label">接入客户端</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <el-icon class="stat-icon" color="#e6a23c"><CircleCheck /></el-icon>
-          <div class="stat-content">
-            <span class="stat-value">{{ stats.totalAuthorizations }}</span>
-            <span class="stat-label">授权次数</span>
-          </div>
-        </div>
-        <div class="stat-card">
-          <el-icon class="stat-icon" color="#409eff"><Odometer /></el-icon>
-          <div class="stat-content">
-            <span class="stat-value">{{ stats.activeClients }}</span>
-            <span class="stat-label">活跃应用</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div class="info-section">
       <el-row :gutter="30">
         <el-col :span="12">
@@ -101,23 +68,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { Lock, Connection, Monitor, User, Setting, CircleCheck, Odometer,Key } from '@element-plus/icons-vue'
-const stats = ref({
-  totalUsers: 0,
-  totalClients: 0,
-  totalAuthorizations: 0,
-  activeClients: 0
-})
-
-onMounted(() => {
-  stats.value = {
-    totalUsers: 12846,
-    totalClients: 57,
-    totalAuthorizations: 89321,
-    activeClients: 23
-  }
-})
+import { Lock, Connection, User, Setting, Key } from '@element-plus/icons-vue'
 </script>
 
 <style scoped>
@@ -225,54 +176,10 @@ onMounted(() => {
   line-height: 1.6;
 }
 
-.stats-section {
-  padding: 60px 20px;
-}
-
-.stats-container {
-  display: flex;
-  gap: 24px;
-  justify-content: center;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.stat-card {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 28px;
-  background: white;
-  border-radius: 16px;
-  border: 1px solid #eef2f6;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-}
-
-.stat-icon {
-  font-size: 36px;
-}
-
-.stat-content {
-  display: flex;
-  flex-direction: column;
-}
-
-.stat-value {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1a1a2e;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #888;
-}
-
 .info-section {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 60px 0;
+  padding: 60px 20px;
 }
 
 .info-card {

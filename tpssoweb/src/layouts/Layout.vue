@@ -46,7 +46,9 @@ const router = useRouter()
 const userStore = useUserStore()
 
 onMounted(() => {
-  userStore.fetchUserInfo()
+  if (!userStore.userInfo) {
+    userStore.fetchUserInfo()
+  }
 })
 
 const doLogout = async () => {

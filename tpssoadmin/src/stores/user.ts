@@ -2,34 +2,33 @@ import { defineStore } from 'pinia'
 import { ref, computed, readonly } from 'vue'
 import { getUserInfo, type UserInfoResult } from '@/api/auth'
 import {
-  getAccessToken,
-  getRefreshToken,
-  setTokens,
-  clearTokens,
-  setCachedRoles,
-  getCachedRoles,
-  hasRole as checkRole,
-  logoutOAuth,
-  refreshAccessToken as refreshOAuthToken
+  exchangeCodeForToken,
+  refreshAccessToken as refreshOAuthToken,
+  logoutOAuth
 } from '@/utils/oauth'
 
 const TOKEN_KEY = 'admin_access_token'
 const REFRESH_TOKEN_KEY = 'admin_refresh_token'
 
 export const useUserStore = defineStore('user', () => {
-  const token = ref<string | null>(getAccessToken())
-  const refreshToken = ref<string | null>(getRefreshToken())
+  const token = ref<string | null>(localStorage.getItem(TOKEN_KEY))
+  const refreshToken = ref<string | null>(localStorage.getItem(REFRESH_TOKEN_KEY))
   const userInfo = ref<UserInfoResult | null>(null)
-  const roles = ref<string[]>(getCachedRoles())
+
+  // 防止并发刷新
+  let refreshingPromise: Promise<string | null> | null = null
 
   const isAuthenticated = computed(() => !!token.value)
-  const isAdmin = computed(() => checkRole('Admin'))
+  const isAdmin = computed(() => userInfo.value?.roles?.includes('Admin') ?? false)
 
-  /** 设置 token 并持久化 */
+  /** 设置 token 并持久化到 localStorage */
   function setAuth(accessToken: string, newRefreshToken?: string) {
     token.value = accessToken
     refreshToken.value = newRefreshToken ?? null
-    setTokens(accessToken, newRefreshToken)
+    localStorage.setItem(TOKEN_KEY, accessToken)
+    if (newRefreshToken) {
+      localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken)
+    }
   }
 
   /** 清除所有认证信息 */
@@ -37,8 +36,14 @@ export const useUserStore = defineStore('user', () => {
     token.value = null
     refreshToken.value = null
     userInfo.value = null
-    roles.value = []
-    clearTokens()
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(REFRESH_TOKEN_KEY)
+  }
+
+  /** 使用授权码换取 Token 并设置认证状态 */
+  async function handleCallback(code: string) {
+    const result = await exchangeCodeForToken(code)
+    setAuth(result.accessToken, result.refreshToken)
   }
 
   /** 获取当前用户信息 */
@@ -46,8 +51,6 @@ export const useUserStore = defineStore('user', () => {
     if (!token.value) return
     try {
       userInfo.value = await getUserInfo()
-      roles.value = userInfo.value.roles || []
-      setCachedRoles(roles.value)
     } catch {
       userInfo.value = null
     }
@@ -60,15 +63,33 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  /** 刷新 Access Token，同步 store 状态 */
+  /** 刷新 Access Token，使用单例模式防止并发 */
   async function refreshAccessToken(): Promise<string | null> {
-    const newToken = await refreshOAuthToken()
-    if (newToken) {
-      token.value = newToken
-      // refreshOAuthToken 内部已通过 setTokens 写了 localStorage，同步到 store
-      refreshToken.value = getRefreshToken()
-    } 
-    return newToken
+    if (refreshingPromise) return refreshingPromise
+
+    if (!refreshToken.value) {
+      clearAuth()
+      return null
+    }
+
+    refreshingPromise = refreshOAuthToken(refreshToken.value)
+      .then((result) => {
+        if (result) {
+          setAuth(result.accessToken, result.refreshToken)
+          return result.accessToken
+        }
+        clearAuth()
+        return null
+      })
+      .catch(() => {
+        clearAuth()
+        return null
+      })
+      .finally(() => {
+        refreshingPromise = null
+      })
+
+    return refreshingPromise
   }
 
   /** 退出登录 */
@@ -84,7 +105,6 @@ export const useUserStore = defineStore('user', () => {
       if (!e.newValue) {
         refreshToken.value = null
         userInfo.value = null
-        roles.value = []
       }
     }
     if (e.key === REFRESH_TOKEN_KEY) {
@@ -96,11 +116,11 @@ export const useUserStore = defineStore('user', () => {
     token: readonly(token),
     refreshToken: readonly(refreshToken),
     userInfo: readonly(userInfo),
-    roles: readonly(roles),
     isAuthenticated,
     isAdmin,
     setAuth,
     clearAuth,
+    handleCallback,
     fetchUserInfo,
     updateUserInfo,
     refreshAccessToken,

@@ -9,10 +9,12 @@
 
 <script setup lang="ts">
 import { CircleCloseFilled } from '@element-plus/icons-vue'
-import { logoutOAuth } from '@/utils/oauth'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
 
 const handleLogout = () => {
-  logoutOAuth()
+  userStore.logout()
 }
 </script>
 

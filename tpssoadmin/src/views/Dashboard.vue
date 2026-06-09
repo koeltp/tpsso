@@ -8,11 +8,11 @@
             <el-icon class="stat-icon" color="#fa8c16"><Document /></el-icon>
           </div>
           <div>
-            <div class="stat-value">{{ pendingCount }}</div>
+            <div class="stat-value">{{ clientStore.pendingCount }}</div>
             <div class="stat-label">待审核客户端</div>
           </div>
         </div>
-        <el-button v-if="pendingCount > 0" type="warning" size="small" text @click="router.push('/clients?status=Pending')">
+        <el-button v-if="clientStore.pendingCount > 0" type="warning" size="small" text @click="router.push('/clients?status=Pending')">
           去审核 →
         </el-button>
       </el-card>
@@ -22,7 +22,7 @@
             <el-icon class="stat-icon" color="#1890ff"><Monitor /></el-icon>
           </div>
           <div>
-            <div class="stat-value">{{ totalClients }}</div>
+            <div class="stat-value">{{ clientStore.totalClients }}</div>
             <div class="stat-label">客户端总数</div>
           </div>
         </div>
@@ -33,7 +33,7 @@
             <el-icon class="stat-icon" color="#52c41a"><CircleCheck /></el-icon>
           </div>
           <div>
-            <div class="stat-value">{{ approvedCount }}</div>
+            <div class="stat-value">{{ clientStore.approvedCount }}</div>
             <div class="stat-label">已通过</div>
           </div>
         </div>
@@ -43,30 +43,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Document, Monitor, CircleCheck } from '@element-plus/icons-vue'
-import { getPendingClients, getAllClients } from '@/api/client'
+import { useClientStore } from '@/stores/client'
 
 const router = useRouter()
-const pendingCount = ref(0)
-const totalClients = ref(0)
-const approvedCount = ref(0)
+const clientStore = useClientStore()
 
-onMounted(async () => {
-  try {
-    const pending = await getPendingClients()
-    pendingCount.value = pending.length
-  } catch {
-    // 拦截器已处理
-  }
-  try {
-    const all = await getAllClients()
-    totalClients.value = all.length
-    approvedCount.value = all.filter(c => c.status === 'Approved').length
-  } catch {
-    // 拦截器已处理
-  }
+onMounted(() => {
+  clientStore.fetchPendingCount()
+  clientStore.fetchStats()
 })
 </script>
 

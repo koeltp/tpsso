@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import router from '@/router'
 import { useUserStore } from '@/stores/user'
 
 const api = axios.create({
@@ -14,16 +15,6 @@ api.interceptors.request.use((config) => {
   }
   return config
 })
-
-// 防止并发刷新的锁
-let isRefreshing = false
-let pendingRequests: Array<(token: string) => void> = []
-
-/** 通知所有等待中的请求继续 */
-function onTokenRefreshed(newToken: string) {
-  pendingRequests.forEach((cb) => cb(newToken))
-  pendingRequests = []
-}
 
 // 响应拦截器：自动解包 ResponseResult，401 时尝试刷新 Token
 api.interceptors.response.use(
@@ -51,40 +42,22 @@ api.interceptors.response.use(
       const userStore = useUserStore()
 
       if (!userStore.refreshToken) {
-        // 没有 Refresh Token，直接跳登录
+        // 没有 Refresh Token，清除认证并跳转登录
         userStore.clearAuth()
         redirectToLogin()
         return Promise.reject(error)
       }
 
-      if (isRefreshing) {
-        // 正在刷新，将请求排队等待
-        return new Promise((resolve) => {
-          pendingRequests.push((newToken: string) => {
-            originalRequest.headers.Authorization = `Bearer ${newToken}`
-            resolve(api(originalRequest))
-          })
-        })
-      }
-
       originalRequest._retry = true
-      isRefreshing = true
 
-      try {
-        const result = await userStore.refreshAccessToken()
-        if (result?.token) {
-          onTokenRefreshed(result.token)
-
-          originalRequest.headers.Authorization = `Bearer ${result.token}`
-          return api(originalRequest)
-        }
-      } catch {
-        // 刷新失败
-      } finally {
-        isRefreshing = false
+      // Store 的 refreshAccessToken 已有单例锁，防止并发刷新
+      const result = await userStore.refreshAccessToken()
+      if (result?.token) {
+        originalRequest.headers.Authorization = `Bearer ${result.token}`
+        return api(originalRequest)
       }
 
-      // 刷新失败，彻底退出
+      // 刷新失败，清除认证并跳转登录
       userStore.clearAuth()
       redirectToLogin()
       return Promise.reject(error)
@@ -101,9 +74,9 @@ api.interceptors.response.use(
 )
 
 function redirectToLogin() {
-  if (window.location.pathname !== '/login') {
-    const returnUrl = encodeURIComponent(window.location.pathname + window.location.search)
-    window.location.href = `/login?returnUrl=${returnUrl}`
+  if (router.currentRoute.value.path !== '/login') {
+    const returnUrl = router.currentRoute.value.fullPath
+    router.push({ path: '/login', query: { returnUrl } })
   }
 }
 

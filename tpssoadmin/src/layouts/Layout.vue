@@ -50,7 +50,7 @@
               <Monitor />
             </el-icon>
             <span>客户端管理</span>
-            <el-badge v-if="pendingCount > 0" :value="pendingCount" class="menu-badge" />
+            <el-badge v-if="clientStore.pendingCount > 0" :value="clientStore.pendingCount" class="menu-badge" />
           </el-menu-item>
         </el-menu>
       </aside>
@@ -64,18 +64,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { DataBoard, Monitor, ArrowDown, SwitchButton, User } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
-import { getPendingClients } from '@/api/client'
+import { useClientStore } from '@/stores/client'
 import logoSrc from '@/assets/logo-icon.png'
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
-
-const pendingCount = ref(0)
+const clientStore = useClientStore()
 
 const activeMenu = computed(() => {
   if (route.path === '/clients') return '/clients'
@@ -83,13 +82,10 @@ const activeMenu = computed(() => {
 })
 
 onMounted(async () => {
-  await userStore.fetchUserInfo()
-  try {
-    const pending = await getPendingClients()
-    pendingCount.value = pending.length
-  } catch {
-    // 拦截器已处理
+  if (!userStore.userInfo) {
+    await userStore.fetchUserInfo()
   }
+  clientStore.fetchPendingCount()
 })
 
 const doLogout = () => {
