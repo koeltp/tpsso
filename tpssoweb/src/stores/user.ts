@@ -42,6 +42,13 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  /** 局部更新用户信息（如修改昵称、头像后） */
+  function updateUserInfo(patch: Partial<UserInfoResult>) {
+    if (userInfo.value) {
+      userInfo.value = { ...userInfo.value, ...patch }
+    }
+  }
+
   /** 刷新 Access Token，使用单例模式防止并发 */
   async function refreshAccessToken(): Promise<LoginResult | null> {
     if (refreshingPromise) return refreshingPromise
@@ -99,6 +106,7 @@ export const useUserStore = defineStore('user', () => {
     setAuth,
     clearAuth,
     fetchUserInfo,
+    updateUserInfo,
     refreshAccessToken,
     logout
   }

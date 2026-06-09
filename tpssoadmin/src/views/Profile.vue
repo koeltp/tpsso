@@ -5,17 +5,11 @@
         <!-- 个人信息 -->
         <el-tab-pane label="个人信息" name="info">
           <div class="avatar-section">
-            <el-upload
-              class="avatar-uploader"
-              action="/api/account/avatar"
-              name="file"
-              :show-file-list="false"
-              :headers="uploadHeaders"
-              :on-success="handleAvatarSuccess"
-              :before-upload="beforeAvatarUpload"
-              accept="image/jpeg,image/png,image/gif,image/webp"
-            >
-              <el-avatar :size="80" :src="profileForm.avatarUrl || undefined" class="avatar-preview" :class="{'has-avatar':profileForm.avatarUrl}">
+            <el-upload class="avatar-uploader" action="/api/account/avatar" name="file" :show-file-list="false"
+              :headers="uploadHeaders" :on-success="handleAvatarSuccess" :before-upload="beforeAvatarUpload"
+              accept="image/jpeg,image/png,image/gif,image/webp">
+              <el-avatar :size="80" :src="profileForm.avatarUrl || undefined" class="avatar-preview"
+                :class="{ 'has-avatar': profileForm.avatarUrl }">
                 <span v-if="!profileForm.avatarUrl">{{ userInfo.username?.charAt(0).toUpperCase() }}</span>
               </el-avatar>
               <div class="avatar-overlay">点击上传</div>
@@ -40,7 +34,8 @@
 
         <!-- 修改密码 -->
         <el-tab-pane label="修改密码" name="password">
-          <el-form :model="passwordForm" label-width="80px" style="max-width: 480px" :rules="passwordRules" ref="passwordFormRef">
+          <el-form :model="passwordForm" label-width="80px" style="max-width: 480px" :rules="passwordRules"
+            ref="passwordFormRef">
             <el-form-item label="当前密码" prop="currentPassword">
               <el-input v-model="passwordForm.currentPassword" type="password" show-password placeholder="请输入当前密码" />
             </el-form-item>
@@ -118,7 +113,7 @@ onMounted(async () => {
 const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
   const allowed = (import.meta.env.VITE_AVATAR_ALLOWED_TYPES || 'image/jpeg,image/png,image/gif,image/webp').split(',')
   if (!allowed.includes(rawFile.type)) {
-    const extensions = allowed.map((x:string) => x.split('/')[1].toUpperCase())
+    const extensions = allowed.map((x: string) => x.split('/')[1].toUpperCase())
     ElMessage.error(`仅支持 ${extensions.join('、')} 格式`)
     return false
   }
@@ -133,7 +128,11 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
 const handleAvatarSuccess: UploadProps['onSuccess'] = (response) => {
   if (response.code === 200 && response.data) {
     profileForm.avatarUrl = response.data
-    if (userStore.userInfo) userStore.userInfo.avatarUrl = response.data
+    if (userStore.userInfo) {
+      userStore.updateUserInfo({
+        avatarUrl: response.data
+      })
+    }
     ElMessage.success('头像上传成功')
   } else {
     ElMessage.error(response.message || '上传失败')
@@ -145,10 +144,10 @@ const handleUpdateProfile = async () => {
   try {
     await updateProfile(profileForm)
     ElMessage.success('修改成功')
-    if (userStore.userInfo) {
-      userStore.userInfo.nickName = profileForm.nickName
-      userStore.userInfo.avatarUrl = profileForm.avatarUrl ?? ''
-    }
+    userStore.updateUserInfo({
+      nickName: profileForm.nickName,
+      avatarUrl: profileForm.avatarUrl ?? ''
+    })
   } catch {
     // 拦截器已处理
   } finally {
@@ -220,9 +219,11 @@ const handleChangePassword = async () => {
   color: white;
   font-weight: 600;
 }
+
 .avatar-preview:not(.has-avatar) {
   background: orange;
 }
+
 .avatar-overlay {
   position: absolute;
   bottom: 0;
