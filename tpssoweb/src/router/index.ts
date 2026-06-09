@@ -33,28 +33,34 @@ const routes: RouteRecordRaw[] = [
     ]
   },
   {
-    path: '/login',
-    name: 'Login',
-    component: () => import('@/views/Login.vue'),
-    meta: { title: '登录' }
-  },
-  {
-    path: '/register',
-    name: 'Register',
-    component: () => import('@/views/Register.vue'),
-    meta: { title: '注册' }
-  },
-  {
-    path: '/authorize',
-    name: 'Authorize',
-    component: () => import('@/views/Authorize.vue'),
-    meta: { title: '授权' }
-  },
-  {
-    path: '/:pathMatch(.*)*',
-    name: 'NotFound',
-    component: () => import('@/views/NotFound.vue'),
-    meta: { title: '页面未找到' }
+    path: '/',
+    component: () => import('@/layouts/GuestLayout.vue'),
+    children: [
+      {
+        path: 'login',
+        name: 'Login',
+        component: () => import('@/views/Login.vue'),
+        meta: { title: '登录' }
+      },
+      {
+        path: 'register',
+        name: 'Register',
+        component: () => import('@/views/Register.vue'),
+        meta: { title: '注册' }
+      },
+      {
+        path: 'authorize',
+        name: 'Authorize',
+        component: () => import('@/views/Authorize.vue'),
+        meta: { title: '授权' }
+      },
+      {
+        path: ':pathMatch(.*)*',
+        name: 'NotFound',
+        component: () => import('@/views/NotFound.vue'),
+        meta: { title: '页面未找到' }
+      }
+    ]
   }
 ]
 

@@ -1,5 +1,5 @@
 <template>
-  <div class="forbidden-container">
+  <div class="forbidden-content">
     <el-icon :size="64" color="#ff4d4f"><CircleCloseFilled /></el-icon>
     <h2>无访问权限</h2>
     <p>您没有管理员权限，无法访问管理后台</p>
@@ -17,27 +17,20 @@ const handleLogout = () => {
 </script>
 
 <style scoped>
-.forbidden-container {
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  background: #f0f2f5;
+.forbidden-content {
+  text-align: center;
 }
 
 h2 {
   font-size: 20px;
   font-weight: 600;
   color: #333;
-  margin: 0;
+  margin: 16px 0 8px;
 }
 
 p {
   font-size: 14px;
   color: #999;
-  margin: 0;
+  margin: 0 0 24px;
 }
 </style>

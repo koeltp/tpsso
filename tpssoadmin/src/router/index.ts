@@ -4,30 +4,6 @@ import { isAuthenticated, hasRole, startOAuthLogin } from '@/utils/oauth'
 
 const routes: RouteRecordRaw[] = [
   {
-    path: '/login',
-    name: 'Login',
-    component: () => import('@/views/Login.vue'),
-    meta: { requiresAuth: false }
-  },
-  {
-    path: '/callback',
-    name: 'Callback',
-    component: () => import('@/views/Callback.vue'),
-    meta: { requiresAuth: false }
-  },
-  {
-    path: '/forbidden',
-    name: 'Forbidden',
-    component: () => import('@/views/Forbidden.vue'),
-    meta: { requiresAuth: false }
-  },
-  {
-    path: '/:pathMatch(.*)*',
-    name: 'NotFound',
-    component: () => import('@/views/NotFound.vue'),
-    meta: { requiresAuth: false }
-  },
-  {
     path: '/',
     component: () => import('@/layouts/Layout.vue'),
     meta: { requiresAuth: true },
@@ -48,6 +24,33 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/Profile.vue')
       }
     ]
+  },
+  {
+    path: '/',
+    component: () => import('@/layouts/GuestLayout.vue'),
+    meta: { requiresAuth: false },
+    children: [
+      {
+        path: 'login',
+        name: 'Login',
+        component: () => import('@/views/Login.vue')
+      },
+      {
+        path: 'callback',
+        name: 'Callback',
+        component: () => import('@/views/Callback.vue')
+      },
+      {
+        path: 'forbidden',
+        name: 'Forbidden',
+        component: () => import('@/views/Forbidden.vue')
+      },
+      {
+        path: ':pathMatch(.*)*',
+        name: 'NotFound',
+        component: () => import('@/views/NotFound.vue')
+      }
+    ]
   }
 ]
 
@@ -58,7 +61,8 @@ const router = createRouter({
 
 // 路由守卫：未登录跳转 SSO 授权，非管理员跳转无权限页
 router.beforeEach((to) => {
-  if (to.meta.requiresAuth !== false) {
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  if (requiresAuth) {
     if (!isAuthenticated()) {
       startOAuthLogin(to.fullPath)
       return false

@@ -1,5 +1,5 @@
 <template>
-  <div class="callback-container">
+  <div class="callback-content">
     <el-icon class="loading-icon" :size="40"><Loading /></el-icon>
     <p>正在登录...</p>
   </div>
@@ -51,14 +51,8 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.callback-container {
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
+.callback-content {
+  text-align: center;
   color: #666;
 }
 
