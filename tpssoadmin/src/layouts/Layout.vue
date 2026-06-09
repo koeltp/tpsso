@@ -9,17 +9,25 @@
       <div class="top-bar-right">
         <el-dropdown trigger="click">
           <span class="user-dropdown">
-            <el-avatar :size="28" :src="userStore.userInfo?.avatarUrl || undefined" class="user-avatar">{{ !userStore.userInfo?.avatarUrl ? userStore.userInfo?.username?.charAt(0).toUpperCase() : '' }}</el-avatar>
+            <el-avatar :size="28" :src="userStore.userInfo?.avatarUrl || undefined" class="user-avatar"
+              :class="{ 'has-avatar': userStore.userInfo?.avatarUrl }">{{ !userStore.userInfo?.avatarUrl ?
+                userStore.userInfo?.username?.charAt(0).toUpperCase() : '' }}</el-avatar>
             <span class="user-name">{{ userStore.userInfo?.username }}</span>
-            <el-icon class="dropdown-icon"><ArrowDown /></el-icon>
+            <el-icon class="dropdown-icon">
+              <ArrowDown />
+            </el-icon>
           </span>
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item @click="router.push('/profile')">
-                <el-icon><User /></el-icon>个人中心
+                <el-icon>
+                  <User />
+                </el-icon>个人中心
               </el-dropdown-item>
               <el-dropdown-item divided @click="doLogout">
-                <el-icon><SwitchButton /></el-icon>退出登录
+                <el-icon>
+                  <SwitchButton />
+                </el-icon>退出登录
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -32,11 +40,15 @@
       <aside class="sidebar">
         <el-menu :default-active="activeMenu" router class="sidebar-menu">
           <el-menu-item index="/">
-            <el-icon><DataBoard /></el-icon>
+            <el-icon>
+              <DataBoard />
+            </el-icon>
             <span>仪表盘</span>
           </el-menu-item>
           <el-menu-item index="/clients">
-            <el-icon><Monitor /></el-icon>
+            <el-icon>
+              <Monitor />
+            </el-icon>
             <span>客户端管理</span>
             <el-badge v-if="pendingCount > 0" :value="pendingCount" class="menu-badge" />
           </el-menu-item>
@@ -138,10 +150,13 @@ const doLogout = () => {
 }
 
 .user-avatar {
-  background: #1890ff;
   color: white;
   font-size: 13px;
   font-weight: 600;
+}
+
+.user-avatar:not(.has-avatar) {
+  background: orange;
 }
 
 .user-name {

@@ -4,7 +4,7 @@
 
     <!-- 筛选栏 -->
     <div class="filter-bar">
-      <el-radio-group v-model="statusFilter" size="small">
+      <el-radio-group v-model="statusFilter">
         <el-radio-button value="">全部</el-radio-button>
         <el-radio-button value="Draft">草稿</el-radio-button>
         <el-radio-button value="Pending">待审核</el-radio-button>

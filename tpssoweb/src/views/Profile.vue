@@ -224,7 +224,6 @@ const handleChangePassword = async () => {
   width: 80px;
   height: 80px;
   font-size: 28px;
-  
   color: white;
   font-weight: 600;
 }

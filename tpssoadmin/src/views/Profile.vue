@@ -15,7 +15,7 @@
               :before-upload="beforeAvatarUpload"
               accept="image/jpeg,image/png,image/gif,image/webp"
             >
-              <el-avatar :size="80" :src="profileForm.avatarUrl || undefined" class="avatar-preview">
+              <el-avatar :size="80" :src="profileForm.avatarUrl || undefined" class="avatar-preview" :class="{'has-avatar':profileForm.avatarUrl}">
                 <span v-if="!profileForm.avatarUrl">{{ userInfo.username?.charAt(0).toUpperCase() }}</span>
               </el-avatar>
               <div class="avatar-overlay">点击上传</div>
@@ -218,11 +218,12 @@ const handleChangePassword = async () => {
   width: 80px;
   height: 80px;
   font-size: 28px;
-  background: #409eff;
   color: white;
   font-weight: 600;
 }
-
+.avatar-preview:not(.has-avatar) {
+  background: orange;
+}
 .avatar-overlay {
   position: absolute;
   bottom: 0;
