@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
-import { getAccessToken, logoutOAuth } from '@/utils/oauth'
+import { getAccessToken, refreshAccessToken, logoutOAuth } from '@/utils/oauth'
 
 const api = axios.create({
   timeout: 30000
@@ -15,7 +15,16 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// 响应拦截器：自动解包 ResponseResult，统一弹窗提示错误
+// 防止并发刷新的锁
+let isRefreshing = false
+let pendingRequests: Array<(token: string) => void> = []
+
+function onTokenRefreshed(newToken: string) {
+  pendingRequests.forEach((cb) => cb(newToken))
+  pendingRequests = []
+}
+
+// 响应拦截器：自动解包 ResponseResult，401 时尝试刷新 Token
 api.interceptors.response.use(
   (response) => {
     const body = response.data
@@ -34,17 +43,47 @@ api.interceptors.response.use(
 
     return (body as any).data ?? body
   },
-  (error) => {
-    // 401 未登录，清除 token 并跳转 SSO 登录
-    if (error.response?.status === 401) {
+  async (error) => {
+    const originalRequest = error.config
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // 正在刷新，将请求排队等待
+        return new Promise((resolve) => {
+          pendingRequests.push((newToken: string) => {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`
+            resolve(api(originalRequest))
+          })
+        })
+      }
+
+      originalRequest._retry = true
+      isRefreshing = true
+
+      try {
+        const newToken = await refreshAccessToken()
+        if (newToken) {
+          onTokenRefreshed(newToken)
+          originalRequest.headers.Authorization = `Bearer ${newToken}`
+          return api(originalRequest)
+        }
+      } catch {
+        // 刷新失败
+      } finally {
+        isRefreshing = false
+      }
+
+      // 刷新失败，退出登录
       logoutOAuth()
       return Promise.reject(error)
     }
+
     if (!error.response) {
       ElMessage.error('网络连接失败，请检查网络')
-    } else {
+    } else if (error.response?.status !== 401) {
       ElMessage.error(error.response?.data?.message || '网络错误')
     }
+
     return Promise.reject(error)
   }
 )

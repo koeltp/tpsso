@@ -15,4 +15,10 @@ public class User : IdentityUser<Guid>
 
     /// <summary>注册时间</summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Refresh Token 值</summary>
+    public string? RefreshToken { get; set; }
+
+    /// <summary>Refresh Token 过期时间</summary>
+    public DateTime? RefreshTokenExpiresAt { get; set; }
 }

@@ -8,11 +8,11 @@
         </router-link>
         <div class="navbar-right">
           <router-link to="/" class="nav-link">首页</router-link>
-          <router-link v-if="userInfo" to="/my-clients" class="nav-link">我的客户端</router-link>
-          <el-dropdown trigger="click" v-if="userInfo">
+          <router-link v-if="userStore.isAuthenticated" to="/my-clients" class="nav-link">我的客户端</router-link>
+          <el-dropdown trigger="click" v-if="userStore.userInfo">
             <span class="user-dropdown">
-              <el-avatar :size="32" :src="userInfo.avatarUrl || undefined" class="user-avatar" :class="{'has-avator':userInfo.avatarUrl}">{{ !userInfo.avatarUrl ? userInfo.username.charAt(0).toUpperCase() : '' }}</el-avatar>
-              <span class="user-name">{{ userInfo.nickName || userInfo.username }}</span>
+              <el-avatar :size="32" :src="userStore.userInfo.avatarUrl || undefined" class="user-avatar" :class="{'has-avatar':userStore.userInfo.avatarUrl}">{{ !userStore.userInfo.avatarUrl ? userStore.userInfo.username.charAt(0).toUpperCase() : '' }}</el-avatar>
+              <span class="user-name">{{ userStore.userInfo.nickName || userStore.userInfo.username }}</span>
               <el-icon class="dropdown-icon"><ArrowDown /></el-icon>
             </span>
             <template #dropdown>
@@ -36,30 +36,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowDown, User, SwitchButton } from '@element-plus/icons-vue'
-import { getUserInfo, logout as logoutApi, type UserInfoResult } from '@/api/auth'
+import { useUserStore } from '@/stores/user'
 import logoSrc from '@/assets/logo-icon.png'
 
 const router = useRouter()
-const userInfo = ref<UserInfoResult | null>(null)
+const userStore = useUserStore()
 
-onMounted(async () => {
-  try {
-    userInfo.value = await getUserInfo()
-  } catch {
-    userInfo.value = null
-  }
+onMounted(() => {
+  userStore.fetchUserInfo()
 })
 
 const doLogout = async () => {
-  try {
-    await logoutApi()
-  } catch {
-    // 拦截器已处理
-  }
-  userInfo.value = null
+  await userStore.logout()
   router.push('/')
 }
 </script>
@@ -145,7 +136,7 @@ const doLogout = async () => {
   font-weight: 600;
 }
 
-.user-avatar:not(.has-avator) {
+.user-avatar:not(.has-avatar) {
   background: orange;
 }
 

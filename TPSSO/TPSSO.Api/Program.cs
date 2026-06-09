@@ -1,6 +1,9 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Validation.AspNetCore;
 using TPSSO.Api.Filters;
@@ -15,6 +18,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 注册 SsoOptions 到 DI 容器
 builder.Services.Configure<SsoOptions>(builder.Configuration.GetSection(SsoOptions.SectionName));
+
+// 注册 JwtOptions
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+builder.Services.Configure<UploadOptions>(builder.Configuration.GetSection(UploadOptions.SectionName));
+var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()!;
 
 // 1. 数据库配置 - MySQL
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -91,14 +99,28 @@ builder.Services.AddOpenIddict()
         options.UseAspNetCore();
     });
 
-builder.Services.AddAuthentication(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
+builder.Services.AddAuthentication(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtOptions.Issuer,
+            ValidAudience = jwtOptions.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SecretKey))
+        };
+    });
 builder.Services.AddAuthorization(options =>
 {
-    // 全局默认策略：同时接受 Bearer token 和 Cookie 认证
-    // tpssoadmin 通过 OAuth Bearer token 访问，tpssoweb 通过 Cookie 访问
+    // 全局默认策略：接受 OAuth Bearer Token、JWT Bearer Token 和 Cookie 认证
+    // tpssoadmin 通过 OAuth Token 访问，tpssoweb 通过 JWT Token 访问，OAuth 授权流程通过 Cookie
     options.DefaultPolicy = new AuthorizationPolicyBuilder()
         .AddAuthenticationSchemes(
             OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme,
+            JwtBearerDefaults.AuthenticationScheme,
             IdentityConstants.ApplicationScheme)
         .RequireAuthenticatedUser()
         .Build();

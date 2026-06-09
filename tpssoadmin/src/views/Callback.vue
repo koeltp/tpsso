@@ -10,10 +10,11 @@ import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Loading } from '@element-plus/icons-vue'
-import { exchangeCodeForToken, getSavedRedirect, setCachedRoles, hasRole } from '@/utils/oauth'
-import { getUserInfo } from '@/api/auth'
+import { exchangeCodeForToken, getSavedRedirect } from '@/utils/oauth'
+import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const userStore = useUserStore()
 
 onMounted(async () => {
   const params = new URLSearchParams(window.location.search)
@@ -34,13 +35,9 @@ onMounted(async () => {
 
   try {
     await exchangeCodeForToken(code)
+    await userStore.fetchUserInfo()
 
-    // 通过 /api/account/me 获取用户角色并缓存
-    // access_token 是加密的 JWT，前端无法直接解析
-    const userInfo = await getUserInfo()
-    setCachedRoles(userInfo.roles || [])
-
-    if (!hasRole('Admin')) {
+    if (!userStore.isAdmin) {
       router.replace('/forbidden')
       return
     }

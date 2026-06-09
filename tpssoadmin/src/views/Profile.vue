@@ -63,11 +63,13 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, type FormInstance, type FormRules, type UploadProps } from 'element-plus'
-import { getUserInfo, updateProfile, changePassword, type UserInfoResult, type UpdateProfileModel, type ChangePasswordModel } from '@/api/auth'
+import { updateProfile, changePassword, type UpdateProfileModel, type ChangePasswordModel } from '@/api/auth'
 import { getAccessToken } from '@/utils/oauth'
+import { useUserStore } from '@/stores/user'
 
 const activeTab = ref('info')
-const userInfo = ref<UserInfoResult>({ username: '', email: '', avatarUrl: '', nickName: '', roles: [] })
+const userStore = useUserStore()
+const userInfo = computed(() => userStore.userInfo || { username: '', email: '', avatarUrl: '', nickName: '', roles: [] as string[] })
 const profileForm = reactive<UpdateProfileModel>({ nickName: '', avatarUrl: '' })
 const profileLoading = ref(false)
 
@@ -107,24 +109,23 @@ const passwordRules: FormRules = {
 }
 
 onMounted(async () => {
-  try {
-    const data = await getUserInfo()
-    userInfo.value = data
-    profileForm.nickName = data.nickName ?? ''
-    profileForm.avatarUrl = data.avatarUrl ?? ''
-  } catch {
-    // 拦截器已处理
+  await userStore.fetchUserInfo()
+  if (userStore.userInfo) {
+    profileForm.nickName = userStore.userInfo.nickName ?? ''
+    profileForm.avatarUrl = userStore.userInfo.avatarUrl ?? ''
   }
 })
 
 const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
-  const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+  const allowed = (import.meta.env.VITE_AVATAR_ALLOWED_TYPES || 'image/jpeg,image/png,image/gif,image/webp').split(',')
   if (!allowed.includes(rawFile.type)) {
-    ElMessage.error('仅支持 JPG/PNG/GIF/WebP 格式')
+    const extensions = allowed.map((x:string) => x.split('/')[1].toUpperCase())
+    ElMessage.error(`仅支持 ${extensions.join('、')} 格式`)
     return false
   }
-  if (rawFile.size / 1024 / 1024 > 2) {
-    ElMessage.error('图片大小不能超过 2MB')
+  const maxSizeMB = Number(import.meta.env.VITE_AVATAR_MAX_SIZE_MB) || 2
+  if (rawFile.size / 1024 / 1024 > maxSizeMB) {
+    ElMessage.error(`图片大小不能超过 ${maxSizeMB}MB`)
     return false
   }
   return true
@@ -133,7 +134,7 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
 const handleAvatarSuccess: UploadProps['onSuccess'] = (response) => {
   if (response.code === 200 && response.data) {
     profileForm.avatarUrl = response.data
-    userInfo.value.avatarUrl = response.data
+    if (userStore.userInfo) userStore.userInfo.avatarUrl = response.data
     ElMessage.success('头像上传成功')
   } else {
     ElMessage.error(response.message || '上传失败')
@@ -145,8 +146,10 @@ const handleUpdateProfile = async () => {
   try {
     await updateProfile(profileForm)
     ElMessage.success('修改成功')
-    userInfo.value.nickName = profileForm.nickName
-    userInfo.value.avatarUrl = profileForm.avatarUrl ?? ''
+    if (userStore.userInfo) {
+      userStore.userInfo.nickName = profileForm.nickName
+      userStore.userInfo.avatarUrl = profileForm.avatarUrl ?? ''
+    }
   } catch {
     // 拦截器已处理
   } finally {

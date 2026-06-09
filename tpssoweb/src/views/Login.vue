@@ -44,9 +44,11 @@ import { useRoute } from 'vue-router'
 import { User, Lock, UserFilled } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { login } from '@/api/auth'
+import { useUserStore } from '@/stores/user'
 import logoSrc from '@/assets/logo.png'
 
 const route = useRoute()
+const userStore = useUserStore()
 
 const formRef = ref<FormInstance>()
 const form = reactive({
@@ -67,7 +69,8 @@ const handleSubmit = async () => {
 
   loading.value = true
   try {
-    await login({ username: form.username, password: form.password })
+    const result = await login({ username: form.username, password: form.password })
+    userStore.setAuth(result)
     window.location.href = returnUrl.value
   } catch {
     // 拦截器已处理

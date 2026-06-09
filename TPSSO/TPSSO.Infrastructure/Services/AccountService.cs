@@ -1,9 +1,14 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using Taipi.Core.RQRS;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;
+using TPSSO.Application.Options;
 using TPSSO.Domain.Entities;
 
 namespace TPSSO.Infrastructure.Services;
@@ -18,35 +23,160 @@ public class AccountService : IAccountService
     private readonly IVerificationCodeService _verificationCodeService;
     private readonly IEmailService _emailService;
     private readonly ILogger<AccountService> _logger;
+    private readonly JwtOptions _jwtOptions;
 
     public AccountService(
         SignInManager<User> signInManager,
         UserManager<User> userManager,
         IVerificationCodeService verificationCodeService,
         IEmailService emailService,
-        ILogger<AccountService> logger)
+        ILogger<AccountService> logger,
+        IOptions<JwtOptions> jwtOptions)
     {
         _signInManager = signInManager;
         _userManager = userManager;
         _verificationCodeService = verificationCodeService;
         _emailService = emailService;
         _logger = logger;
+        _jwtOptions = jwtOptions.Value;
     }
 
-    public async Task<ResponseResult<bool>> LoginAsync(LoginModel model)
+    public async Task<ResponseResult<LoginResult>> LoginAsync(LoginModel model)
     {
         var user = await _userManager.FindByNameAsync(model.Username);
         if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
-            return ResponseResult<bool>.Error(401, "无效的用户名或密码");
+            return ResponseResult<LoginResult>.Error(401, "无效的用户名或密码");
 
+        // 为 OAuth 授权流程保留 Cookie 登录态
         await _signInManager.SignInAsync(user, isPersistent: model.RememberMe);
-        return new ResponseResult<bool>(true) { Code = 200, Message = "登录成功" };
+
+        // 签发 Access Token
+        var roles = await _userManager.GetRolesAsync(user);
+        var expiresAt = DateTime.UtcNow.AddMinutes(_jwtOptions.ExpireMinutes);
+
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Name, user.UserName ?? ""),
+            new(JwtRegisteredClaimNames.Email, user.Email ?? ""),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: _jwtOptions.Issuer,
+            audience: _jwtOptions.Audience,
+            claims: claims,
+            expires: expiresAt,
+            signingCredentials: credentials
+        );
+
+        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
+        // 生成 Refresh Token 并存入数据库
+        var refreshToken = Guid.NewGuid().ToString("N");
+        var refreshExpiresAt = DateTime.UtcNow.AddDays(_jwtOptions.RefreshExpireDays);
+        user.RefreshToken = refreshToken;
+        user.RefreshTokenExpiresAt = refreshExpiresAt;
+        await _userManager.UpdateAsync(user);
+
+        var userInfo = new UserInfoResult
+        {
+            Username = user.UserName ?? "",
+            Email = user.Email ?? "",
+            AvatarUrl = user.AvatarUrl ?? "",
+            NickName = user.NickName,
+            Roles = roles.ToList()
+        };
+
+        var result = new LoginResult
+        {
+            Token = tokenString,
+            RefreshToken = refreshToken,
+            ExpiresAt = expiresAt,
+            UserInfo = userInfo
+        };
+
+        return new ResponseResult<LoginResult>(result) { Code = 200, Message = "登录成功" };
     }
 
     public async Task<ResponseResult<bool>> LogoutAsync()
     {
         await _signInManager.SignOutAsync();
         return ResponseResult<bool>.Success();
+    }
+
+    public async Task<ResponseResult<LoginResult>> RefreshTokenAsync(string refreshToken)
+    {
+        // 查找持有该 Refresh Token 的用户
+        var users = _userManager.Users.ToList();
+        var user = users.FirstOrDefault(u => u.RefreshToken == refreshToken);
+        if (user == null)
+            return ResponseResult<LoginResult>.Error(401, "无效的 Refresh Token");
+
+        if (user.RefreshTokenExpiresAt == null || user.RefreshTokenExpiresAt < DateTime.UtcNow)
+            return ResponseResult<LoginResult>.Error(401, "Refresh Token 已过期");
+
+        // 签发新的 Access Token
+        var roles = await _userManager.GetRolesAsync(user);
+        var expiresAt = DateTime.UtcNow.AddMinutes(_jwtOptions.ExpireMinutes);
+
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Name, user.UserName ?? ""),
+            new(JwtRegisteredClaimNames.Email, user.Email ?? ""),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: _jwtOptions.Issuer,
+            audience: _jwtOptions.Audience,
+            claims: claims,
+            expires: expiresAt,
+            signingCredentials: credentials
+        );
+
+        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
+        // 轮换 Refresh Token：生成新的，旧的作废
+        var newRefreshToken = Guid.NewGuid().ToString("N");
+        var newRefreshExpiresAt = DateTime.UtcNow.AddDays(_jwtOptions.RefreshExpireDays);
+        user.RefreshToken = newRefreshToken;
+        user.RefreshTokenExpiresAt = newRefreshExpiresAt;
+        await _userManager.UpdateAsync(user);
+
+        var userInfo = new UserInfoResult
+        {
+            Username = user.UserName ?? "",
+            Email = user.Email ?? "",
+            AvatarUrl = user.AvatarUrl ?? "",
+            NickName = user.NickName,
+            Roles = roles.ToList()
+        };
+
+        var result = new LoginResult
+        {
+            Token = tokenString,
+            RefreshToken = newRefreshToken,
+            ExpiresAt = expiresAt,
+            UserInfo = userInfo
+        };
+
+        return new ResponseResult<LoginResult>(result) { Code = 200, Message = "刷新成功" };
     }
 
     public async Task<ResponseResult<UserInfoResult>> GetCurrentUserAsync(ClaimsPrincipal principal)

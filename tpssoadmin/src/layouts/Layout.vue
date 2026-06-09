@@ -9,8 +9,8 @@
       <div class="top-bar-right">
         <el-dropdown trigger="click">
           <span class="user-dropdown">
-            <el-avatar :size="28" :src="userInfo?.avatarUrl || undefined" class="user-avatar">{{ !userInfo?.avatarUrl ? userInfo?.username?.charAt(0).toUpperCase() : '' }}</el-avatar>
-            <span class="user-name">{{ userInfo?.username }}</span>
+            <el-avatar :size="28" :src="userStore.userInfo?.avatarUrl || undefined" class="user-avatar">{{ !userStore.userInfo?.avatarUrl ? userStore.userInfo?.username?.charAt(0).toUpperCase() : '' }}</el-avatar>
+            <span class="user-name">{{ userStore.userInfo?.username }}</span>
             <el-icon class="dropdown-icon"><ArrowDown /></el-icon>
           </span>
           <template #dropdown>
@@ -55,30 +55,23 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { DataBoard, Monitor, ArrowDown, SwitchButton, User } from '@element-plus/icons-vue'
-import { getUserInfo } from '@/api/auth'
+import { useUserStore } from '@/stores/user'
 import { getPendingClients } from '@/api/client'
-import { logoutOAuth } from '@/utils/oauth'
-import type { UserInfoResult } from '@/api/auth'
 import logoSrc from '@/assets/logo-icon.png'
 
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserStore()
 
-const userInfo = ref<UserInfoResult | null>(null)
 const pendingCount = ref(0)
 
 const activeMenu = computed(() => {
-  // /clients?status=Pending 也高亮客户端管理菜单
   if (route.path === '/clients') return '/clients'
   return route.path
 })
 
 onMounted(async () => {
-  try {
-    userInfo.value = await getUserInfo()
-  } catch {
-    // 拦截器已处理
-  }
+  await userStore.fetchUserInfo()
   try {
     const pending = await getPendingClients()
     pendingCount.value = pending.length
@@ -88,7 +81,7 @@ onMounted(async () => {
 })
 
 const doLogout = () => {
-  logoutOAuth()
+  userStore.logout()
 }
 </script>
 

@@ -8,6 +8,13 @@ export interface UserInfoResult {
   roles: string[]
 }
 
+export interface LoginResult {
+  token: string
+  refreshToken: string
+  expiresAt: string
+  userInfo: UserInfoResult
+}
+
 export interface LoginRequest {
   username: string
   password: string
@@ -35,14 +42,19 @@ export interface ChangePasswordModel {
   newPassword: string
 }
 
-/** 登录 */
-export const login = (data: LoginRequest): Promise<boolean> => {
+/** 登录，返回 JWT Token 和用户信息 */
+export const login = (data: LoginRequest): Promise<LoginResult> => {
   return api.post('/api/account/login', data)
 }
 
 /** 退出 */
 export const logout = (): Promise<boolean> => {
   return api.post('/api/account/logout')
+}
+
+/** 使用 Refresh Token 刷新 Access Token */
+export const refreshToken = (refreshToken: string): Promise<LoginResult> => {
+  return api.post('/api/account/refresh', { refreshToken })
 }
 
 /** 获取当前用户信息 */

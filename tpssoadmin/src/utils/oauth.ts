@@ -3,8 +3,8 @@
  * tpssoadmin 作为标准 OAuth 客户端接入 SSO
  */
 
-const CLIENT_ID = 'tpsso_admin_client'
-const SCOPES = 'openid profile email roles'
+const CLIENT_ID = import.meta.env.VITE_OAUTH_CLIENT_ID || 'tpsso_admin_client'
+const SCOPES = import.meta.env.VITE_OAUTH_SCOPE || 'openid profile email roles'
 const TOKEN_KEY = 'admin_access_token'
 const REFRESH_TOKEN_KEY = 'admin_refresh_token'
 const CODE_VERIFIER_KEY = 'admin_code_verifier'
@@ -51,7 +51,6 @@ export async function startOAuthLogin(redirectPath?: string): Promise<void> {
     code_challenge_method: 'S256'
   })
 
-  // 跳转到 SSO 授权端点
   window.location.href = `/connect/authorize?${params.toString()}`
 }
 
@@ -82,12 +81,55 @@ export async function exchangeCodeForToken(code: string): Promise<void> {
   }
 
   const data = await response.json()
-  localStorage.setItem(TOKEN_KEY, data.access_token)
-  if (data.refresh_token) {
-    localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh_token)
-  }
+  setTokens(data.access_token, data.refresh_token)
+  sessionStorage.removeItem(CODE_VERIFIER_KEY)
+}
 
-  // 清理临时数据
+/** 使用 Refresh Token 刷新 Access Token */
+export async function refreshAccessToken(): Promise<string | null> {
+  const refreshTokenValue = localStorage.getItem(REFRESH_TOKEN_KEY)
+  if (!refreshTokenValue) return null
+
+  const params = new URLSearchParams({
+    grant_type: 'refresh_token',
+    refresh_token: refreshTokenValue,
+    client_id: CLIENT_ID
+  })
+
+  try {
+    const response = await fetch('/connect/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params.toString()
+    })
+
+    if (!response.ok) {
+      clearTokens()
+      return null
+    }
+
+    const data = await response.json()
+    setTokens(data.access_token, data.refresh_token)
+    return data.access_token
+  } catch {
+    clearTokens()
+    return null
+  }
+}
+
+/** 设置 token 到 localStorage */
+export function setTokens(accessToken: string, refreshToken?: string): void {
+  localStorage.setItem(TOKEN_KEY, accessToken)
+  if (refreshToken) {
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
+  }
+}
+
+/** 清除所有认证信息 */
+export function clearTokens(): void {
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(REFRESH_TOKEN_KEY)
+  localStorage.removeItem(ROLES_KEY)
   sessionStorage.removeItem(CODE_VERIFIER_KEY)
 }
 
@@ -96,7 +138,12 @@ export function getAccessToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
 }
 
-/** 缓存用户角色（通过 /api/account/me 接口获取后缓存） */
+/** 获取 refresh token */
+export function getRefreshToken(): string | null {
+  return localStorage.getItem(REFRESH_TOKEN_KEY)
+}
+
+/** 缓存用户角色 */
 export function setCachedRoles(roles: string[]): void {
   localStorage.setItem(ROLES_KEY, JSON.stringify(roles))
 }
@@ -124,11 +171,7 @@ export function isAuthenticated(): boolean {
 
 /** 退出登录 */
 export function logoutOAuth(): void {
-  localStorage.removeItem(TOKEN_KEY)
-  localStorage.removeItem(REFRESH_TOKEN_KEY)
-  localStorage.removeItem(ROLES_KEY)
-  sessionStorage.removeItem(CODE_VERIFIER_KEY)
-  // 跳转到 SSO 登出端点（post_logout_redirect_uri 必须与种子数据中注册的一致）
+  clearTokens()
   window.location.href = '/connect/logout?post_logout_redirect_uri=' + encodeURIComponent(window.location.origin)
 }
 

@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Taipi.Core.RQRS;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;
+using TPSSO.Application.Options;
 
 namespace TPSSO.Api.Controllers;
 
@@ -13,17 +15,28 @@ public class AccountController : ControllerBase
 {
     private readonly IAccountService _accountService;
     private readonly IWebHostEnvironment _env;
+    private readonly UploadOptions _uploadOptions;
 
-    public AccountController(IAccountService accountService, IWebHostEnvironment env)
+    public AccountController(IAccountService accountService, IWebHostEnvironment env, IOptions<UploadOptions> uploadOptions)
     {
         _accountService = accountService;
         _env = env;
+        _uploadOptions = uploadOptions.Value;
     }
 
     [HttpPost("login")]
-    public async Task<ResponseResult<bool>> Login([FromBody] LoginModel model)
+    public async Task<ResponseResult<LoginResult>> Login([FromBody] LoginModel model)
     {
         return await _accountService.LoginAsync(model);
+    }
+
+    /// <summary>
+    /// 使用 Refresh Token 刷新 Access Token
+    /// </summary>
+    [HttpPost("refresh")]
+    public async Task<ResponseResult<LoginResult>> Refresh([FromBody] RefreshTokenRequest model)
+    {
+        return await _accountService.RefreshTokenAsync(model.RefreshToken);
     }
 
     [HttpPost("logout")]
@@ -54,15 +67,19 @@ public class AccountController : ControllerBase
     /// </summary>
     [HttpPost("avatar")]
     [Authorize]
-    [RequestSizeLimit(2 * 1024 * 1024)] // 限制 2MB
     public async Task<ResponseResult<string>> UploadAvatar(IFormFile file)
     {
         if (file == null || file.Length == 0)
             return ResponseResult<string>.BadRequest("请选择文件");
 
-        var allowedTypes = new[] { "image/jpeg", "image/png", "image/gif", "image/webp" };
+        var allowedTypes = _uploadOptions.AvatarAllowedTypes.Split(',');
         if (!allowedTypes.Contains(file.ContentType))
-            return ResponseResult<string>.BadRequest("仅支持 JPG/PNG/GIF/WebP 格式");
+        {
+            allowedTypes = [.. allowedTypes.Select(x => x.Split('/')[1])];
+            return ResponseResult<string>.BadRequest($"仅支持 {string.Join("、", allowedTypes)} 格式");
+        }
+        if (file.Length > _uploadOptions.AvatarMaxSizeMB * 1024 * 1024)
+            return ResponseResult<string>.BadRequest($"文件大小不能超过 {_uploadOptions.AvatarMaxSizeMB}MB");
 
         // 获取当前用户 ID 用于生成文件名
         var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "unknown";
