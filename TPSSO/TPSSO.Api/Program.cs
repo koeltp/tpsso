@@ -161,6 +161,11 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ModelStateFilter>();
+})
+.AddJsonOptions(options =>
+{
+    // 枚举用字符串序列化/反序列化，前端传 "Pending" 而非 1
+    options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
 });
 builder.Services.AddOpenApi();
 

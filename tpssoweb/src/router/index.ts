@@ -70,7 +70,7 @@ const router = createRouter({
   routes
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   document.title = `${to.meta.title || 'TPSSO'} - TPSSO`
 
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
@@ -78,6 +78,10 @@ router.beforeEach((to) => {
     const userStore = useUserStore()
     if (!userStore.isAuthenticated) {
       return { name: 'Login', query: { returnUrl: to.fullPath } }
+    }
+    // 刷新页面时 userInfo 丢失，需要重新获取
+    if (!userStore.userInfo) {
+      await userStore.fetchUserInfo()
     }
   }
 })

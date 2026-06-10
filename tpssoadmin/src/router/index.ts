@@ -61,13 +61,17 @@ const router = createRouter({
 })
 
 // 路由守卫：未登录跳转 SSO 授权，非管理员跳转无权限页
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   if (requiresAuth) {
     const userStore = useUserStore()
     if (!userStore.isAuthenticated) {
       startOAuthLogin(to.fullPath)
       return false
+    }
+    // 刷新页面时 userInfo 丢失，需要重新获取
+    if (!userStore.userInfo) {
+      await userStore.fetchUserInfo()
     }
     if (!userStore.isAdmin) {
       return { name: 'Forbidden' }

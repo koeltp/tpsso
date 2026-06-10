@@ -31,14 +31,25 @@ public class ClientController : ControllerBase
     }
 
     /// <summary>
-    /// 我创建的客户端
+    /// 搜索我的客户端（分页）
     /// </summary>
-    [HttpGet("my")]
+    [HttpPost("my/search")]
     [Authorize]
-    public async Task<ResponseResult<List<ClientResult>>> GetMyClients()
+    public async Task<PagerResponseResult<ClientResult>> SearchMy([FromBody] SearchPager<ClientSearchCondition> pager)
     {
         var userId = GetUserId();
-        return await _clientService.GetMyClientsAsync(userId);
+        return await _clientService.SearchAsync(pager, userId, isAdmin: false);
+    }
+
+    /// <summary>
+    /// 搜索客户端（管理员，分页）
+    /// </summary>
+    [HttpPost("search")]
+    [Authorize(Roles = "Admin")]
+    public async Task<PagerResponseResult<ClientResult>> Search([FromBody] SearchPager<ClientSearchCondition> pager)
+    {
+        var userId = GetUserId();
+        return await _clientService.SearchAsync(pager, userId, isAdmin: true);
     }
 
     /// <summary>
@@ -93,26 +104,6 @@ public class ClientController : ControllerBase
     {
         var userId = GetUserId();
         return await _clientService.DeleteAsync(id, userId);
-    }
-
-    /// <summary>
-    /// 待审核列表（管理员）
-    /// </summary>
-    [HttpGet("pending")]
-    [Authorize(Roles = "Admin")]
-    public async Task<ResponseResult<List<ClientResult>>> GetPending()
-    {
-        return await _clientService.GetPendingAsync();
-    }
-
-    /// <summary>
-    /// 所有客户端列表（管理员）
-    /// </summary>
-    [HttpGet]
-    [Authorize(Roles = "Admin")]
-    public async Task<ResponseResult<List<ClientResult>>> GetAll()
-    {
-        return await _clientService.GetAllAsync();
     }
 
     /// <summary>

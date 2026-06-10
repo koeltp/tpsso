@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using OpenIddict.Abstractions;
+using Org.BouncyCastle.Asn1.IsisMtt.X509;
+using Taipi.Core.Linq;
 using Taipi.Core.RQRS;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;
@@ -252,16 +254,34 @@ public class ClientService : IClientService
         return ResponseResult<bool>.Success("已删除");
     }
 
-    public async Task<ResponseResult<List<ClientResult>>> GetMyClientsAsync(Guid userId)
+    public async Task<PagerResponseResult<ClientResult>> SearchAsync(SearchPager<ClientSearchCondition> pager, Guid userId, bool isAdmin)
     {
-        var clients = await _context.ClientApplications
+        var query = _context.ClientApplications
             .Include(c => c.RedirectUris)
             .Include(c => c.AllowedScopes)
-            .Where(c => c.CreatedByUserId == userId)
-            .OrderByDescending(c => c.CreatedAt)
-            .ToListAsync();
+            .AsQueryable();
 
-        return new ResponseResult<List<ClientResult>>(clients.Select(ToResult).ToList()) { Code = 200 };
+        // 非管理员只能查自己的客户端
+        query = query.WhereIf(!isAdmin, c => c.CreatedByUserId == userId);
+
+        // 按状态筛选
+        query = query.WhereIf(
+            pager.Condition?.Status.HasValue == true,
+            c => c.Status == pager.Condition!.Status!.Value);
+
+        // 按关键字模糊搜索（名称或 ClientId）
+        var keyword = pager.Condition?.Keyword?.Trim();
+        query = query.WhereIf(
+            !string.IsNullOrEmpty(keyword),
+            c => c.Name.Contains(keyword!) || c.ClientId.Contains(keyword!));
+
+        // 默认按创建时间降序
+        query = query.OrderByDescending(c => c.CreatedAt);
+
+        var totalCount = await query.CountAsync();
+        var items = await query.Page(pager).ToListAsync();
+
+        return new PagerResponseResult<ClientResult>(items.Select(ToResult), pager, totalCount);
     }
 
     public async Task<ResponseResult<ClientResult>> GetByIdAsync(Guid id)
@@ -271,29 +291,6 @@ public class ClientService : IClientService
             return ResponseResult<ClientResult>.NotFound("客户端不存在");
 
         return new ResponseResult<ClientResult>(ToResult(client)) { Code = 200 };
-    }
-
-    public async Task<ResponseResult<List<ClientResult>>> GetPendingAsync()
-    {
-        var clients = await _context.ClientApplications
-            .Include(c => c.RedirectUris)
-            .Include(c => c.AllowedScopes)
-            .Where(c => c.Status == ClientStatus.Pending)
-            .OrderBy(c => c.CreatedAt)
-            .ToListAsync();
-
-        return new ResponseResult<List<ClientResult>>(clients.Select(ToResult).ToList()) { Code = 200 };
-    }
-
-    public async Task<ResponseResult<List<ClientResult>>> GetAllAsync()
-    {
-        var clients = await _context.ClientApplications
-            .Include(c => c.RedirectUris)
-            .Include(c => c.AllowedScopes)
-            .OrderByDescending(c => c.CreatedAt)
-            .ToListAsync();
-
-        return new ResponseResult<List<ClientResult>>(clients.Select(ToResult).ToList()) { Code = 200 };
     }
 
     // ──────── 私有方法 ────────

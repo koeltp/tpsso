@@ -18,6 +18,7 @@
 		  <PrivateAssets>all</PrivateAssets>
 		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="Microsoft.Extensions.FileSystemGlobbing" Version="9.0.16" />
 		<PackageReference Include="OpenIddict.AspNetCore" Version="7.5.0" />
 		<PackageReference Include="OpenIddict.Quartz" Version="7.5.0" />
 		<PackageReference Include="TaiPi.Core" Version="1.0.3" />

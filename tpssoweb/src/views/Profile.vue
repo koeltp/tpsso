@@ -184,8 +184,8 @@ const handleChangePassword = async () => {
 
 <style scoped>
 .profile-content {
-  max-width: 640px;
-  margin: 40px auto;
+  max-width: 1200px;
+  margin: 20px auto;
   padding: 0 20px;
 }
 

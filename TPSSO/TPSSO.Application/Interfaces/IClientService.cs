@@ -1,6 +1,5 @@
 using Taipi.Core.RQRS;
 using TPSSO.Application.Models;
-using TPSSO.Domain.Entities;
 
 namespace TPSSO.Application.Interfaces;
 
@@ -45,22 +44,12 @@ public interface IClientService
     Task<ResponseResult<bool>> DeleteAsync(Guid id, Guid userId);
 
     /// <summary>
-    /// 获取我创建的客户端
+    /// 搜索客户端（分页），管理员可查所有，普通用户仅查自己的
     /// </summary>
-    Task<ResponseResult<List<ClientResult>>> GetMyClientsAsync(Guid userId);
+    Task<PagerResponseResult<ClientResult>> SearchAsync(SearchPager<ClientSearchCondition> pager, Guid userId, bool isAdmin);
 
     /// <summary>
     /// 获取客户端详情
     /// </summary>
     Task<ResponseResult<ClientResult>> GetByIdAsync(Guid id);
-
-    /// <summary>
-    /// 获取待审核列表
-    /// </summary>
-    Task<ResponseResult<List<ClientResult>>> GetPendingAsync();
-
-    /// <summary>
-    /// 获取所有客户端（管理员）
-    /// </summary>
-    Task<ResponseResult<List<ClientResult>>> GetAllAsync();
 }

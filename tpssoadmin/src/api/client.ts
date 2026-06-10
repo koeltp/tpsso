@@ -20,14 +20,31 @@ export interface RejectClientRequest {
   reason: string
 }
 
-/** 所有客户端列表 */
-export const getAllClients = (): Promise<ClientResult[]> => {
-  return api.get('/api/client')
+/** 搜索条件 */
+export interface ClientSearchCondition {
+  keyword?: string
+  status?: string
 }
 
-/** 待审核列表 */
-export const getPendingClients = (): Promise<ClientResult[]> => {
-  return api.get('/api/client/pending')
+/** 分页请求参数 */
+export interface SearchPager<T> {
+  pageIndex: number
+  pageSize: number
+  condition?: T
+}
+
+/** 分页响应数据 */
+export interface PagerResponse<T> {
+  items: T[]
+  totalCount: number
+  pageIndex: number
+  pageSize: number
+  pageCount: number
+}
+
+/** 搜索客户端（管理员，分页） */
+export const searchClients = (pager: SearchPager<ClientSearchCondition>): Promise<PagerResponse<ClientResult>> => {
+  return api.post('/api/client/search', pager)
 }
 
 /** 客户端详情 */

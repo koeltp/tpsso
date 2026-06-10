@@ -5,6 +5,10 @@
       <div class="top-bar-left">
         <img :src="logoSrc" alt="TPSSO" width="24" height="24" />
         <span class="top-bar-title">TPSSO 管理后台</span>
+        <el-icon class="collapse-btn" @click="toggleCollapse">
+          <Fold v-if="!isCollapsed" />
+          <Expand v-else />
+        </el-icon>
       </div>
       <div class="top-bar-right">
         <el-dropdown trigger="click">
@@ -37,22 +41,22 @@
 
     <div class="main-wrapper">
       <!-- 侧边栏 -->
-      <aside class="sidebar">
-        <el-menu :default-active="activeMenu" router class="sidebar-menu">
-          <el-menu-item index="/">
-            <el-icon>
-              <DataBoard />
-            </el-icon>
-            <span>仪表盘</span>
-          </el-menu-item>
-          <el-menu-item index="/clients">
-            <el-icon>
-              <Monitor />
-            </el-icon>
-            <span>客户端管理</span>
-            <el-badge v-if="clientStore.pendingCount > 0" :value="clientStore.pendingCount" class="menu-badge" />
-          </el-menu-item>
-        </el-menu>
+      <aside class="sidebar" :class="{ collapsed: isCollapsed }">
+        <div class="menu-list">
+          <div
+            v-for="item in menuItems"
+            :key="item.path"
+            :class="['menu-item', { active: activeMenu === item.path }]"
+            @click="router.push(item.path)"
+          >
+            <el-icon class="menu-icon"><component :is="item.icon" /></el-icon>
+            <span v-show="!isCollapsed">{{ item.name }}</span>
+            <span
+              v-if="item.badge && item.badge() > 0 && !isCollapsed"
+              class="menu-badge-dot"
+            />
+          </div>
+        </div>
       </aside>
 
       <!-- 内容区 -->
@@ -64,9 +68,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { ref, computed, markRaw, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { DataBoard, Monitor, ArrowDown, SwitchButton, User } from '@element-plus/icons-vue'
+import { DataBoard, Monitor, ArrowDown, SwitchButton, User, Fold, Expand } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useClientStore } from '@/stores/client'
 import logoSrc from '@/assets/logo-icon.png'
@@ -75,11 +79,21 @@ const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const clientStore = useClientStore()
+const isCollapsed = ref(false)
 
 const activeMenu = computed(() => {
   if (route.path === '/clients') return '/clients'
   return route.path
 })
+
+const menuItems = [
+  { name: '仪表盘', path: '/', icon: markRaw(DataBoard) },
+  { name: '客户端管理', path: '/clients', icon: markRaw(Monitor), badge: () => clientStore.pendingCount }
+]
+
+const toggleCollapse = () => {
+  isCollapsed.value = !isCollapsed.value
+}
 
 onMounted(async () => {
   if (!userStore.userInfo) {
@@ -124,6 +138,20 @@ const doLogout = () => {
   font-size: 15px;
   font-weight: 600;
   color: #1a1a2e;
+}
+
+.collapse-btn {
+  font-size: 18px;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.collapse-btn:hover {
+  color: #1890ff;
+  background: #e6f7ff;
 }
 
 .top-bar-right {
@@ -172,41 +200,69 @@ const doLogout = () => {
   min-height: 0;
 }
 
-/* 侧边栏 - Casdoor 浅色风格 */
+/* 侧边栏 - 深色风格 */
 .sidebar {
   width: 200px;
-  background: #fff;
-  border-right: 1px solid #e8e8e8;
+  background-color: #304156;
   flex-shrink: 0;
-  padding-top: 8px;
+  transition: width 0.3s;
+  overflow: hidden;
 }
 
-.sidebar-menu {
-  border-right: none;
+.sidebar.collapsed {
+  width: 64px;
 }
 
-.sidebar-menu .el-menu-item {
-  height: 44px;
-  line-height: 44px;
-  color: #666;
-  font-size: 14px;
-  margin: 2px 8px;
-  border-radius: 6px;
+.menu-list {
+  padding: 10px 0;
 }
 
-.sidebar-menu .el-menu-item:hover {
-  color: #1890ff;
-  background: #e6f7ff;
+.menu-list .menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  color: #bfcbd9;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
 }
 
-.sidebar-menu .el-menu-item.is-active {
-  color: #1890ff;
-  background: #e6f7ff;
-  font-weight: 500;
+.sidebar.collapsed .menu-item {
+  justify-content: center;
+  padding: 12px;
 }
 
-.menu-badge {
-  margin-left: auto;
+.menu-list .menu-item:hover {
+  background-color: #2a3f5f;
+  color: #fff;
+}
+
+.menu-list .menu-item.active {
+  background-color: #2a3f5f;
+  color: #409eff;
+  border-left: 3px solid #409eff;
+}
+
+.menu-icon {
+  width: 18px;
+  height: 18px;
+  color: #bfcbd9;
+  flex-shrink: 0;
+}
+
+.menu-item:hover .menu-icon,
+.menu-item.active .menu-icon {
+  color: #409eff;
+}
+
+.menu-badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f56c6c;
+  margin-left: 6px;
+  flex-shrink: 0;
 }
 
 /* 内容区 */

@@ -3,18 +3,20 @@
     <h2 class="page-title">仪表盘</h2>
     <div class="stats-grid">
       <el-card shadow="hover" class="stat-card">
-        <div class="stat-content">
-          <div class="stat-icon-wrap" style="background: #fff7e6">
-            <el-icon class="stat-icon" color="#fa8c16"><Document /></el-icon>
+        <div class="stat-row">
+          <div class="stat-content">
+            <div class="stat-icon-wrap" style="background: #fff7e6">
+              <el-icon class="stat-icon" color="#fa8c16"><Document /></el-icon>
+            </div>
+            <div>
+              <div class="stat-value">{{ clientStore.pendingCount }}</div>
+              <div class="stat-label">待审核客户端</div>
+            </div>
           </div>
-          <div>
-            <div class="stat-value">{{ clientStore.pendingCount }}</div>
-            <div class="stat-label">待审核客户端</div>
-          </div>
+          <el-button v-if="clientStore.pendingCount > 0" type="warning" text @click="router.push('/clients?status=Pending')">
+            去审核 →
+          </el-button>
         </div>
-        <el-button v-if="clientStore.pendingCount > 0" type="warning" size="small" text @click="router.push('/clients?status=Pending')">
-          去审核 →
-        </el-button>
       </el-card>
       <el-card shadow="hover" class="stat-card">
         <div class="stat-content">
@@ -73,6 +75,12 @@ onMounted(() => {
 
 .stat-card {
   border-radius: 8px;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .stat-content {

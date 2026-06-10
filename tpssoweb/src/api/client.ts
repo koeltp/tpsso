@@ -14,6 +14,7 @@ export interface ClientResult {
   reviewRemark?: string
   createdAt: string
   updatedAt?: string
+  rowVersion?: string
 }
 
 export interface ClientCreatedResult extends ClientResult {
@@ -35,10 +36,33 @@ export interface UpdateClientRequest {
   logo?: string
   redirectUris: string
   allowedScopes?: string
+  rowVersion?: string
 }
 
 export interface RejectClientRequest {
   reason: string
+}
+
+/** 搜索条件 */
+export interface ClientSearchCondition {
+  keyword?: string
+  status?: string
+}
+
+/** 分页请求参数 */
+export interface SearchPager<T> {
+  pageIndex: number
+  pageSize: number
+  condition?: T
+}
+
+/** 分页响应数据 */
+export interface PagerResponse<T> {
+  items: T[]
+  totalCount: number
+  pageIndex: number
+  pageSize: number
+  pageCount: number
 }
 
 /** 创建客户端 */
@@ -46,9 +70,9 @@ export const createClient = (data: CreateClientRequest): Promise<ClientCreatedRe
   return api.post('/api/client', data)
 }
 
-/** 我创建的客户端 */
-export const getMyClients = (): Promise<ClientResult[]> => {
-  return api.get('/api/client/my')
+/** 搜索我的客户端（分页） */
+export const searchMyClients = (pager: SearchPager<ClientSearchCondition>): Promise<PagerResponse<ClientResult>> => {
+  return api.post('/api/client/my/search', pager)
 }
 
 /** 客户端详情 */
@@ -74,19 +98,4 @@ export const withdrawClient = (id: string): Promise<boolean> => {
 /** 删除客户端 */
 export const deleteClient = (id: string): Promise<boolean> => {
   return api.delete(`/api/client/${id}`)
-}
-
-/** 待审核列表（管理员） */
-export const getPendingClients = (): Promise<ClientResult[]> => {
-  return api.get('/api/client/pending')
-}
-
-/** 审核通过（管理员） */
-export const approveClient = (id: string): Promise<boolean> => {
-  return api.post(`/api/client/${id}/approve`)
-}
-
-/** 审核拒绝（管理员） */
-export const rejectClient = (id: string, data: RejectClientRequest): Promise<boolean> => {
-  return api.post(`/api/client/${id}/reject`, data)
 }

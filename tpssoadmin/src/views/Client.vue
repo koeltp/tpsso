@@ -1,72 +1,118 @@
 <template>
-  <div class="all-clients">
-    <h2 class="page-title">客户端管理</h2>
+  <div class="clients-page">
+    <el-card class="page-card">
+      <template #header>
+        <div class="card-header">
+          <span class="page-title">客户端管理</span>
+        </div>
+      </template>
 
-    <!-- 筛选栏 -->
-    <div class="filter-bar">
-      <el-radio-group v-model="statusFilter">
-        <el-radio-button value="">全部</el-radio-button>
-        <el-radio-button value="Draft">草稿</el-radio-button>
-        <el-radio-button value="Pending">待审核</el-radio-button>
-        <el-radio-button value="Approved">已通过</el-radio-button>
-        <el-radio-button value="Rejected">已拒绝</el-radio-button>
-      </el-radio-group>
-    </div>
+      <!-- 搜索区域 -->
+      <div class="search-area">
+        <el-form :inline="true" :model="searchForm" class="search-form">
+          <el-form-item label="关键字">
+            <el-input
+              v-model="searchForm.keyword"
+              placeholder="名称或 Client ID"
+              clearable
+              style="width: 200px"
+              @clear="handleSearch"
+              @keyup.enter="handleSearch"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-radio-group v-model="searchForm.status" @change="handleSearch">
+              <el-radio-button value="">全部</el-radio-button>
+              <el-radio-button value="Draft">草稿</el-radio-button>
+              <el-radio-button value="Pending">待审核</el-radio-button>
+              <el-radio-button value="Approved">已通过</el-radio-button>
+              <el-radio-button value="Rejected">已拒绝</el-radio-button>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item>
+            <el-button type="primary" @click="handleSearch">
+              <el-icon><Search /></el-icon>
+              搜索
+            </el-button>
+            <el-button @click="handleReset">重置</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
 
-    <el-table :data="filteredClients" stripe style="width: 100%" v-loading="loading">
-      <el-table-column prop="name" label="应用名称" min-width="140" />
-      <el-table-column prop="clientId" label="Client ID" min-width="180">
-        <template #default="{ row }">
-          <code>{{ row.clientId }}</code>
-        </template>
-      </el-table-column>
-      <el-table-column label="类型" width="100">
-        <template #default="{ row }">
-          {{ row.isPublic ? '公开' : '机密' }}
-        </template>
-      </el-table-column>
-      <el-table-column label="状态" width="90">
-        <template #default="{ row }">
-          <el-tag :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column label="创建时间" width="170">
-        <template #default="{ row }">
-          {{ formatDate(row.createdAt) }}
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" width="200" fixed="right">
-        <template #default="{ row }">
-          <template v-if="row.status === 'Pending'">
-            <el-button type="primary" size="small" text @click="handleApprove(row.id)">通过</el-button>
-            <el-button type="warning" size="small" text @click="handleReject(row)">拒绝</el-button>
+      <!-- 表格区域 -->
+      <el-table :data="clients" v-loading="loading" stripe>
+        <el-table-column type="index" label="序号" width="70" align="center" />
+        <el-table-column prop="name" label="应用名称" min-width="140" />
+        <el-table-column prop="clientId" label="Client ID" min-width="180">
+          <template #default="{ row }">
+            <code>{{ row.clientId }}</code>
           </template>
-          <el-button type="danger" size="small" text @click="handleDelete(row.id)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+        </el-table-column>
+        <el-table-column label="类型" width="90" align="center">
+          <template #default="{ row }">
+            {{ row.isPublic ? '公开' : '机密' }}
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="100" align="center">
+          <template #default="{ row }">
+            <el-tag :type="statusTagType(row.status)" size="small">{{ statusLabel(row.status) }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="创建时间" width="170">
+          <template #default="{ row }">
+            {{ formatDate(row.createdAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="200" align="center" fixed="right">
+          <template #default="{ row }">
+            <el-button v-if="row.status === 'Pending'" type="success" link size="small" @click="handleApprove(row.id)">通过</el-button>
+            <el-button v-if="row.status === 'Pending'" type="danger" link size="small" @click="handleReject(row)">拒绝</el-button>
+            <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <!-- 分页区域 -->
+      <div class="pagination-area">
+        <el-pagination
+          v-model:current-page="pageIndex"
+          v-model:page-size="pageSize"
+          :total="totalCount"
+          :page-sizes="[10, 20, 50]"
+          layout="total, sizes, prev, pager, next, jumper"
+          background
+          @size-change="fetchClients"
+          @current-change="fetchClients"
+        />
+      </div>
+    </el-card>
 
     <!-- 拒绝对话框 -->
-    <el-dialog v-model="rejectDialogVisible" title="拒绝审核" width="400px">
-      <el-form ref="rejectFormRef" :model="rejectForm" :rules="rejectRules">
-        <el-form-item label="拒绝原因" prop="reason">
-          <el-input v-model="rejectForm.reason" type="textarea" :rows="3" placeholder="请输入拒绝原因" />
+    <el-dialog v-model="rejectDialogVisible" title="拒绝审核" width="450px">
+      <el-form ref="rejectFormRef" :model="rejectForm" :rules="rejectRules" label-width="80px">
+        <el-form-item label="原因" prop="reason">
+          <el-input v-model="rejectForm.reason" type="textarea" :rows="4" placeholder="请输入拒绝原因" />
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="rejectDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="rejectLoading" @click="confirmReject">确认拒绝</el-button>
+        <el-button type="danger" :loading="rejectLoading" @click="confirmReject">确认拒绝</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { getAllClients, deleteClient, approveClient, rejectClient, type ClientResult } from '@/api/client'
+import { Search } from '@element-plus/icons-vue'
+import { deleteClient, approveClient, rejectClient, type ClientResult } from '@/api/client'
 import { statusTagType, statusLabel, formatDate } from '@/utils/client'
 import { useClientStore } from '@/stores/client'
 
@@ -74,19 +120,41 @@ const route = useRoute()
 const clientStore = useClientStore()
 const loading = ref(false)
 const clients = ref<ClientResult[]>([])
+const pageIndex = ref(1)
+const pageSize = ref(10)
+const totalCount = ref(0)
 
-// 从 URL 参数读取初始筛选状态（Dashboard 跳转时传入）
-const statusFilter = ref((route.query.status as string) || '')
-
-const filteredClients = computed(() => {
-  if (!statusFilter.value) return clients.value
-  return clients.value.filter(c => c.status === statusFilter.value)
+const searchForm = reactive({
+  keyword: '',
+  status: (route.query.status as string) || ''
 })
+
+/** 搜索时重置到第一页 */
+const handleSearch = () => {
+  pageIndex.value = 1
+  fetchClients()
+}
+
+/** 重置搜索条件 */
+const handleReset = () => {
+  searchForm.keyword = ''
+  searchForm.status = ''
+  handleSearch()
+}
 
 const fetchClients = async () => {
   loading.value = true
   try {
-    clients.value = await getAllClients()
+    const result = await clientStore.search({
+      pageIndex: pageIndex.value,
+      pageSize: pageSize.value,
+      condition: {
+        ...(searchForm.keyword ? { keyword: searchForm.keyword } : {}),
+        ...(searchForm.status ? { status: searchForm.status } : {})
+      }
+    })
+    clients.value = result.items
+    totalCount.value = result.totalCount
   } catch {
     // 拦截器已处理
   } finally {
@@ -155,15 +223,43 @@ onMounted(fetchClients)
 </script>
 
 <style scoped>
+.clients-page {
+  padding: 20px;
+}
+
+.page-card {
+  border-radius: 4px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .page-title {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #333;
+}
+
+.search-area {
+  padding: 0;
   margin-bottom: 20px;
 }
 
-.filter-bar {
-  margin-bottom: 16px;
+.search-form {
+  margin: 0;
+}
+
+.search-form .el-form-item {
+  margin-bottom: 0;
+}
+
+.pagination-area {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
 }
 
 code {
