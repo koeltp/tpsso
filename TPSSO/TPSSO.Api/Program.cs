@@ -87,8 +87,19 @@ builder.Services.AddOpenIddict()
         options.AllowAuthorizationCodeFlow()
                .RequireProofKeyForCodeExchange();
 
-        options.AddDevelopmentEncryptionCertificate()
-               .AddDevelopmentSigningCertificate();
+        // 开发环境使用自签名证书，生产环境必须配置正式证书
+        if (builder.Environment.IsDevelopment())
+        {
+            options.AddDevelopmentEncryptionCertificate()
+                   .AddDevelopmentSigningCertificate();
+        }
+        else
+        {
+            // 生产环境：从文件加载证书（需配置证书路径）
+            // 示例：options.AddEncryptionCertificate(File.ReadAllBytes("encryption.pfx"));
+            //       options.AddSigningCertificate(File.ReadAllBytes("signing.pfx"));
+            throw new InvalidOperationException("生产环境必须配置 OpenIddict 正式加密和签名证书，请参见 appsettings 配置。");
+        }
 
         options.UseAspNetCore()
                .EnableAuthorizationEndpointPassthrough()

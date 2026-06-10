@@ -52,29 +52,19 @@ public class AuthorizationController : ControllerBase
 
         // 如果用户尚未登录，重定向到前端登录页面
         if (!User.Identity?.IsAuthenticated == true)
-        {
-            var returnUrl = $"{Request.Scheme}://{Request.Host}/connect/authorize{HttpContext.Request.QueryString}";
-            var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
-            var loginUrl = $"{_ssoOptions.LoginBaseUrl}{_ssoOptions.LoginPath}?returnUrl={encodedReturnUrl}";
-            return Redirect(loginUrl);
-        }
+            return RedirectToLoginPage();
 
         // 验证客户端应用是否存在
         var application = await _applicationManager.FindByClientIdAsync(request.ClientId);
         if (application == null)
-        {
             throw new InvalidOperationException("The client application cannot be found.");
-        }
 
         // 获取当前登录的用户
         var user = await _userManager.GetUserAsync(User);
         if (user == null)
         {
             await _signInManager.SignOutAsync();
-            var returnUrl = $"{Request.Scheme}://{Request.Host}/connect/authorize{HttpContext.Request.QueryString}";
-            var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
-            var loginUrl = $"{_ssoOptions.LoginBaseUrl}{_ssoOptions.LoginPath}?returnUrl={encodedReturnUrl}";
-            return Redirect(loginUrl);
+            return RedirectToLoginPage();
         }
 
         // 获取客户端应用的显示名称
@@ -103,27 +93,17 @@ public class AuthorizationController : ControllerBase
                       throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
 
         if (!User.Identity?.IsAuthenticated == true)
-        {
-            var returnUrl = $"{Request.Scheme}://{Request.Host}/connect/authorize{HttpContext.Request.QueryString}";
-            var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
-            var loginUrl = $"{_ssoOptions.LoginBaseUrl}{_ssoOptions.LoginPath}?returnUrl={encodedReturnUrl}";
-            return Redirect(loginUrl);
-        }
+            return RedirectToLoginPage();
 
         var application = await _applicationManager.FindByClientIdAsync(request.ClientId);
         if (application == null)
-        {
             throw new InvalidOperationException("The client application cannot be found.");
-        }
 
         var user = await _userManager.GetUserAsync(User);
         if (user == null)
         {
             await _signInManager.SignOutAsync();
-            var returnUrl = $"{Request.Scheme}://{Request.Host}/connect/authorize{HttpContext.Request.QueryString}";
-            var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
-            var loginUrl = $"{_ssoOptions.LoginBaseUrl}{_ssoOptions.LoginPath}?returnUrl={encodedReturnUrl}";
-            return Redirect(loginUrl);
+            return RedirectToLoginPage();
         }
 
         // 用户已同意授权，创建身份标识并签发授权码
@@ -179,9 +159,7 @@ public class AuthorizationController : ControllerBase
         await _signInManager.SignOutAsync();
 
         if (request?.PostLogoutRedirectUri != null)
-        {
             return Redirect(request.PostLogoutRedirectUri);
-        }
 
         return Redirect(_ssoOptions.LoginBaseUrl);
     }
@@ -193,9 +171,7 @@ public class AuthorizationController : ControllerBase
         {
             var request = HttpContext.GetOpenIddictServerRequest();
             if (request == null)
-            {
                 return BadRequest(new { error = "invalid_request", error_description = "The OpenID Connect request cannot be retrieved." });
-            }
 
             if (request.IsAuthorizationCodeGrantType())
             {
@@ -240,5 +216,18 @@ public class AuthorizationController : ControllerBase
         {
             return BadRequest(new { error = "server_error", error_description = ex.Message });
         }
+    }
+
+    // ──────── 私有方法 ────────
+
+    /// <summary>
+    /// 构造前端登录页重定向 URL，将当前授权端点地址作为 returnUrl 传递
+    /// </summary>
+    private IActionResult RedirectToLoginPage()
+    {
+        var returnUrl = $"{Request.Scheme}://{Request.Host}/connect/authorize{HttpContext.Request.QueryString}";
+        var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
+        var loginUrl = $"{_ssoOptions.LoginBaseUrl}{_ssoOptions.LoginPath}?returnUrl={encodedReturnUrl}";
+        return Redirect(loginUrl);
     }
 }

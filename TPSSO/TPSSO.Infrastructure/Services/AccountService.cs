@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -50,60 +51,7 @@ public class AccountService : IAccountService
         // 为 OAuth 授权流程保留 Cookie 登录态
         await _signInManager.SignInAsync(user, isPersistent: model.RememberMe);
 
-        // 签发 Access Token
-        var roles = await _userManager.GetRolesAsync(user);
-        var expiresAt = DateTime.UtcNow.AddMinutes(_jwtOptions.ExpireMinutes);
-
-        var claims = new List<Claim>
-        {
-            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.Name, user.UserName ?? ""),
-            new(JwtRegisteredClaimNames.Email, user.Email ?? ""),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        };
-        foreach (var role in roles)
-        {
-            claims.Add(new Claim(ClaimTypes.Role, role));
-        }
-
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var token = new JwtSecurityToken(
-            issuer: _jwtOptions.Issuer,
-            audience: _jwtOptions.Audience,
-            claims: claims,
-            expires: expiresAt,
-            signingCredentials: credentials
-        );
-
-        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-
-        // 生成 Refresh Token 并存入数据库
-        var refreshToken = Guid.NewGuid().ToString("N");
-        var refreshExpiresAt = DateTime.UtcNow.AddDays(_jwtOptions.RefreshExpireDays);
-        user.RefreshToken = refreshToken;
-        user.RefreshTokenExpiresAt = refreshExpiresAt;
-        await _userManager.UpdateAsync(user);
-
-        var userInfo = new UserInfoResult
-        {
-            Username = user.UserName ?? "",
-            Email = user.Email ?? "",
-            AvatarUrl = user.AvatarUrl ?? "",
-            NickName = user.NickName,
-            Roles = roles.ToList()
-        };
-
-        var result = new LoginResult
-        {
-            Token = tokenString,
-            RefreshToken = refreshToken,
-            ExpiresAt = expiresAt,
-            UserInfo = userInfo
-        };
-
-        return new ResponseResult<LoginResult>(result) { Code = 200, Message = "登录成功" };
+        return await IssueTokensAsync(user, "登录成功");
     }
 
     public async Task<ResponseResult<bool>> LogoutAsync()
@@ -114,69 +62,16 @@ public class AccountService : IAccountService
 
     public async Task<ResponseResult<LoginResult>> RefreshTokenAsync(string refreshToken)
     {
-        // 查找持有该 Refresh Token 的用户
-        var users = _userManager.Users.ToList();
-        var user = users.FirstOrDefault(u => u.RefreshToken == refreshToken);
+        // 直接数据库查询，避免全表加载到内存
+        var user = await _userManager.Users
+            .FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
         if (user == null)
             return ResponseResult<LoginResult>.Error(401, "无效的 Refresh Token");
 
         if (user.RefreshTokenExpiresAt == null || user.RefreshTokenExpiresAt < DateTime.UtcNow)
             return ResponseResult<LoginResult>.Error(401, "Refresh Token 已过期");
 
-        // 签发新的 Access Token
-        var roles = await _userManager.GetRolesAsync(user);
-        var expiresAt = DateTime.UtcNow.AddMinutes(_jwtOptions.ExpireMinutes);
-
-        var claims = new List<Claim>
-        {
-            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new(JwtRegisteredClaimNames.Name, user.UserName ?? ""),
-            new(JwtRegisteredClaimNames.Email, user.Email ?? ""),
-            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
-        };
-        foreach (var role in roles)
-        {
-            claims.Add(new Claim(ClaimTypes.Role, role));
-        }
-
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey));
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var token = new JwtSecurityToken(
-            issuer: _jwtOptions.Issuer,
-            audience: _jwtOptions.Audience,
-            claims: claims,
-            expires: expiresAt,
-            signingCredentials: credentials
-        );
-
-        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-
-        // 轮换 Refresh Token：生成新的，旧的作废
-        var newRefreshToken = Guid.NewGuid().ToString("N");
-        var newRefreshExpiresAt = DateTime.UtcNow.AddDays(_jwtOptions.RefreshExpireDays);
-        user.RefreshToken = newRefreshToken;
-        user.RefreshTokenExpiresAt = newRefreshExpiresAt;
-        await _userManager.UpdateAsync(user);
-
-        var userInfo = new UserInfoResult
-        {
-            Username = user.UserName ?? "",
-            Email = user.Email ?? "",
-            AvatarUrl = user.AvatarUrl ?? "",
-            NickName = user.NickName,
-            Roles = roles.ToList()
-        };
-
-        var result = new LoginResult
-        {
-            Token = tokenString,
-            RefreshToken = newRefreshToken,
-            ExpiresAt = expiresAt,
-            UserInfo = userInfo
-        };
-
-        return new ResponseResult<LoginResult>(result) { Code = 200, Message = "刷新成功" };
+        return await IssueTokensAsync(user, "刷新成功");
     }
 
     public async Task<ResponseResult<UserInfoResult>> GetCurrentUserAsync(ClaimsPrincipal principal)
@@ -286,5 +181,67 @@ public class AccountService : IAccountService
             return ResponseResult<bool>.BadRequest(string.Join("；", result.Errors.Select(e => e.Description)));
 
         return ResponseResult<bool>.Success("注册成功");
+    }
+
+    // ──────── 私有方法 ────────
+
+    /// <summary>
+    /// 签发 JWT Access Token + Refresh Token，统一登录和刷新的 Token 生成逻辑
+    /// </summary>
+    private async Task<ResponseResult<LoginResult>> IssueTokensAsync(User user, string message)
+    {
+        var roles = await _userManager.GetRolesAsync(user);
+        var expiresAt = DateTime.UtcNow.AddMinutes(_jwtOptions.ExpireMinutes);
+
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new(JwtRegisteredClaimNames.Name, user.UserName ?? ""),
+            new(JwtRegisteredClaimNames.Email, user.Email ?? ""),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+        };
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.SecretKey));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: _jwtOptions.Issuer,
+            audience: _jwtOptions.Audience,
+            claims: claims,
+            expires: expiresAt,
+            signingCredentials: credentials
+        );
+
+        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
+        // 轮换 Refresh Token：每次签发都生成新的，旧的作废
+        var newRefreshToken = Guid.NewGuid().ToString("N");
+        var newRefreshExpiresAt = DateTime.UtcNow.AddDays(_jwtOptions.RefreshExpireDays);
+        user.RefreshToken = newRefreshToken;
+        user.RefreshTokenExpiresAt = newRefreshExpiresAt;
+        await _userManager.UpdateAsync(user);
+
+        var userInfo = new UserInfoResult
+        {
+            Username = user.UserName ?? "",
+            Email = user.Email ?? "",
+            AvatarUrl = user.AvatarUrl ?? "",
+            NickName = user.NickName,
+            Roles = roles.ToList()
+        };
+
+        var result = new LoginResult
+        {
+            Token = tokenString,
+            RefreshToken = newRefreshToken,
+            ExpiresAt = expiresAt,
+            UserInfo = userInfo
+        };
+
+        return new ResponseResult<LoginResult>(result) { Code = 200, Message = message };
     }
 }

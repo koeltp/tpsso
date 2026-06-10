@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Taipi.Core.RQRS;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;
-using TPSSO.Domain.Entities;
 
 namespace TPSSO.Api.Controllers;
 
@@ -13,12 +13,10 @@ namespace TPSSO.Api.Controllers;
 public class ClientController : ControllerBase
 {
     private readonly IClientService _clientService;
-    private readonly UserManager<User> _userManager;
 
-    public ClientController(IClientService clientService, UserManager<User> userManager)
+    public ClientController(IClientService clientService)
     {
         _clientService = clientService;
-        _userManager = userManager;
     }
 
     /// <summary>
@@ -139,9 +137,12 @@ public class ClientController : ControllerBase
         return await _clientService.RejectAsync(id, reviewerId, model.Reason);
     }
 
+    /// <summary>
+    /// 从 Claims 中直接读取当前用户 ID，避免不必要的数据库查询
+    /// </summary>
     private Guid GetUserId()
     {
-        var userIdStr = _userManager.GetUserId(User);
+        var userIdStr = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
         return Guid.Parse(userIdStr!);
     }
 }

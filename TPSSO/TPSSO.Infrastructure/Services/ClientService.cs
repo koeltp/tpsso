@@ -351,22 +351,22 @@ public class ClientService : IClientService
 
     private static ClientCreatedResult ToCreatedResult(ClientApplication client)
     {
-        var result = new ClientCreatedResult
+        var baseResult = ToResult(client);
+        return new ClientCreatedResult
         {
-            Id = client.Id,
-            ClientId = client.ClientId,
-            Name = client.Name,
-            Description = client.Description,
-            Logo = client.Logo,
-            RedirectUris = string.Join("\n", client.RedirectUris.Select(u => u.Uri)),
-            AllowedScopes = string.Join(" ", client.AllowedScopes.Select(s => s.Scope)),
-            IsPublic = client.IsPublic,
-            Status = client.Status.ToString(),
-            ReviewRemark = client.ReviewRemark,
-            CreatedAt = client.CreatedAt,
-            UpdatedAt = client.UpdatedAt,
-            RowVersion = client.RowVersion != null ? Convert.ToBase64String(client.RowVersion) : null
+            Id = baseResult.Id,
+            ClientId = baseResult.ClientId,
+            Name = baseResult.Name,
+            Description = baseResult.Description,
+            Logo = baseResult.Logo,
+            RedirectUris = baseResult.RedirectUris,
+            AllowedScopes = baseResult.AllowedScopes,
+            IsPublic = baseResult.IsPublic,
+            Status = baseResult.Status,
+            ReviewRemark = baseResult.ReviewRemark,
+            CreatedAt = baseResult.CreatedAt,
+            UpdatedAt = baseResult.UpdatedAt,
+            RowVersion = baseResult.RowVersion
         };
-        return result;
     }
 }
