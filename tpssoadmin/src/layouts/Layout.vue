@@ -70,7 +70,7 @@
 <script setup lang="ts">
 import { ref, computed, markRaw, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { DataBoard, Monitor, ArrowDown, SwitchButton, User, Fold, Expand, UserFilled } from '@element-plus/icons-vue'
+import { DataBoard, Monitor, ArrowDown, SwitchButton, User, Fold, Expand, UserFilled, Setting } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useClientStore } from '@/stores/client'
 import logoSrc from '@/assets/logo-icon.png'
@@ -90,7 +90,8 @@ const activeMenu = computed(() => {
 const menuItems = [
   { name: '仪表盘', path: '/', icon: markRaw(DataBoard) },
   { name: '客户端管理', path: '/clients', icon: markRaw(Monitor), badge: () => clientStore.pendingCount },
-  { name: '用户管理', path: '/users', icon: markRaw(UserFilled) }
+  { name: '用户管理', path: '/users', icon: markRaw(UserFilled) },
+  { name: '配置管理', path: '/dict', icon: markRaw(Setting) }
 ]
 
 const toggleCollapse = () => {

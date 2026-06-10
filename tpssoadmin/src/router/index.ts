@@ -25,6 +25,11 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/User.vue')
       },
       {
+        path: 'dict',
+        name: 'Dict',
+        component: () => import('@/views/Dict.vue')
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('@/views/Profile.vue')

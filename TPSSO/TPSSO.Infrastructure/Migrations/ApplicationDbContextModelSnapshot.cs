@@ -455,6 +455,97 @@ namespace TPSSO.Infrastructure.Migrations
                     b.ToTable("ClientScopes", (string)null);
                 });
 
+            modelBuilder.Entity("TPSSO.Domain.Entities.DictItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsSensitive")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<int>("Sort")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("TypeId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TypeId", "Key")
+                        .IsUnique();
+
+                    b.ToTable("DictItems", (string)null);
+                });
+
+            modelBuilder.Entity("TPSSO.Domain.Entities.DictType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<Guid?>("ParentId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("Sort")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("ParentId");
+
+                    b.ToTable("DictTypes", (string)null);
+                });
+
             modelBuilder.Entity("TPSSO.Domain.Entities.Role", b =>
                 {
                     b.Property<Guid>("Id")
@@ -705,6 +796,27 @@ namespace TPSSO.Infrastructure.Migrations
                     b.Navigation("ClientApplication");
                 });
 
+            modelBuilder.Entity("TPSSO.Domain.Entities.DictItem", b =>
+                {
+                    b.HasOne("TPSSO.Domain.Entities.DictType", "Type")
+                        .WithMany("Items")
+                        .HasForeignKey("TypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Type");
+                });
+
+            modelBuilder.Entity("TPSSO.Domain.Entities.DictType", b =>
+                {
+                    b.HasOne("TPSSO.Domain.Entities.DictType", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Parent");
+                });
+
             modelBuilder.Entity("OpenIddict.EntityFrameworkCore.Models.OpenIddictEntityFrameworkCoreApplication", b =>
                 {
                     b.Navigation("Authorizations");
@@ -722,6 +834,13 @@ namespace TPSSO.Infrastructure.Migrations
                     b.Navigation("AllowedScopes");
 
                     b.Navigation("RedirectUris");
+                });
+
+            modelBuilder.Entity("TPSSO.Domain.Entities.DictType", b =>
+                {
+                    b.Navigation("Children");
+
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

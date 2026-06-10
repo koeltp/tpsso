@@ -53,4 +53,9 @@ public interface IAccountService
     /// 使用 Refresh Token 刷新 Access Token
     /// </summary>
     Task<ResponseResult<LoginResult>> RefreshTokenAsync(string refreshToken);
+
+    /// <summary>
+    /// 外部登录（通过用户 ID 直接签发 Token）
+    /// </summary>
+    Task<ResponseResult<LoginResult>> ExternalLoginAsync(ExternalLoginModel model);
 }

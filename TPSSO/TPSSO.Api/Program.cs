@@ -144,7 +144,29 @@ builder.Services.AddAuthentication("SmartScheme")
             ValidAudience = jwtOptions.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.SecretKey))
         };
+    })
+    .AddGitHub(options =>
+    {
+        // 占位值，PostConfigure 从数据库动态覆盖
+        options.ClientId = "placeholder";
+        options.ClientSecret = "placeholder";
+        options.CallbackPath = "/api/external/github/callback";
+        options.Scope.Add("user:email");
     });
+
+// 从数据库动态配置 GitHub OAuth 的 ClientId/ClientSecret，配置管理页面修改后即时生效
+builder.Services.PostConfigure<AspNet.Security.OAuth.GitHub.GitHubAuthenticationOptions>(options =>
+{
+    using var scope = builder.Services.BuildServiceProvider().CreateScope();
+    var configService = scope.ServiceProvider.GetRequiredService<IConfigService>();
+    var clientId = configService.GetStringAsync("GitHub", "ClientId").GetAwaiter().GetResult();
+    var clientSecret = configService.GetStringAsync("GitHub", "ClientSecret").GetAwaiter().GetResult();
+
+    if (!string.IsNullOrEmpty(clientId))
+        options.ClientId = clientId;
+    if (!string.IsNullOrEmpty(clientSecret))
+        options.ClientSecret = clientSecret;
+});
 builder.Services.AddAuthorization(options =>
 {
     // 全局默认策略：接受 OAuth Bearer Token、JWT Bearer Token 和 Cookie 认证
@@ -177,6 +199,8 @@ builder.Services.AddScoped<IVerificationCodeService, VerificationCodeService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IDictService, DictService>();
+builder.Services.AddScoped<IConfigService, ConfigService>();
 
 var app = builder.Build();
 

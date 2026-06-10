@@ -12,6 +12,8 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
     public DbSet<ClientApplication> ClientApplications => Set<ClientApplication>();
     public DbSet<ClientRedirectUri> ClientRedirectUris => Set<ClientRedirectUri>();
     public DbSet<ClientScope> ClientScopes => Set<ClientScope>();
+    public DbSet<DictType> DictTypes => Set<DictType>();
+    public DbSet<DictItem> DictItems => Set<DictItem>();
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options) { }
@@ -111,6 +113,31 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
             entity.ToTable("ClientScopes");
             entity.Property(e => e.Scope).HasMaxLength(100).IsRequired();
             entity.HasIndex(e => e.ClientApplicationId);
+        });
+
+        // 字典类型表配置
+        builder.Entity<DictType>(entity =>
+        {
+            entity.ToTable("DictTypes");
+            entity.Property(e => e.Code).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Name).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.HasIndex(e => e.Code).IsUnique();
+            // 自引用：父分类
+            entity.HasOne(e => e.Parent)
+                  .WithMany(e => e.Children)
+                  .HasForeignKey(e => e.ParentId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // 字典项表配置
+        builder.Entity<DictItem>(entity =>
+        {
+            entity.ToTable("DictItems");
+            entity.Property(e => e.Key).HasMaxLength(100).IsRequired();
+            entity.Property(e => e.Value).HasMaxLength(2000).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.HasIndex(e => new { e.TypeId, e.Key }).IsUnique();
         });
     }
 }

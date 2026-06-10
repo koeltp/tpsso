@@ -29,6 +29,14 @@ public class LoginResult
 }
 
 /// <summary>
+/// 外部登录请求（通过用户 ID 直接签发 Token，仅供外部登录回调内部调用）
+/// </summary>
+public class ExternalLoginModel
+{
+    public Guid UserId { get; set; }
+}
+
+/// <summary>
 /// 刷新 Token 请求
 /// </summary>
 public class RefreshTokenRequest

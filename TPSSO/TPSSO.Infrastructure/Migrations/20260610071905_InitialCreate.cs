@@ -93,6 +93,35 @@ namespace TPSSO.Infrastructure.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "DictTypes",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Code = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Name = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Description = table.Column<string>(type: "varchar(500)", maxLength: 500, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Sort = table.Column<int>(type: "int", nullable: false),
+                    IsEnabled = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    ParentId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
+                    CreatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DictTypes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DictTypes_DictTypes_ParentId",
+                        column: x => x.ParentId,
+                        principalTable: "DictTypes",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "Roles",
                 columns: table => new
                 {
@@ -276,6 +305,36 @@ namespace TPSSO.Infrastructure.Migrations
                         name: "FK_ClientScopes_ClientApplications_ClientApplicationId",
                         column: x => x.ClientApplicationId,
                         principalTable: "ClientApplications",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "DictItems",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    TypeId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    Key = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Value = table.Column<string>(type: "varchar(2000)", maxLength: 2000, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    Description = table.Column<string>(type: "varchar(500)", maxLength: 500, nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    IsSensitive = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    Sort = table.Column<int>(type: "int", nullable: false),
+                    IsEnabled = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DictItems", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DictItems_DictTypes_TypeId",
+                        column: x => x.TypeId,
+                        principalTable: "DictTypes",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 })
@@ -484,6 +543,23 @@ namespace TPSSO.Infrastructure.Migrations
                 column: "ClientApplicationId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_DictItems_TypeId_Key",
+                table: "DictItems",
+                columns: new[] { "TypeId", "Key" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DictTypes_Code",
+                table: "DictTypes",
+                column: "Code",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DictTypes_ParentId",
+                table: "DictTypes",
+                column: "ParentId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RoleClaims_RoleId",
                 table: "RoleClaims",
                 column: "RoleId");
@@ -558,6 +634,9 @@ namespace TPSSO.Infrastructure.Migrations
                 name: "ClientScopes");
 
             migrationBuilder.DropTable(
+                name: "DictItems");
+
+            migrationBuilder.DropTable(
                 name: "RoleClaims");
 
             migrationBuilder.DropTable(
@@ -583,6 +662,9 @@ namespace TPSSO.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "ClientApplications");
+
+            migrationBuilder.DropTable(
+                name: "DictTypes");
 
             migrationBuilder.DropTable(
                 name: "Authorizations");

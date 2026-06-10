@@ -152,5 +152,6 @@ dotnet ef database update --project TPSSO.Infrastructure --startup-project TPSSO
 # 删除数据库
 dotnet ef database drop -f --project TPSSO.Infrastructure --startup-project TPSSO.Api
 ```
-
+dotnet ef database drop --force
+dotnet ef database update
 开发模式下，重启服务时会自动删除并重建数据库。

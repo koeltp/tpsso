@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
 using TPSSO.Domain.Entities;
 using TPSSO.Infrastructure.Data;
+using TPSSO.Infrastructure.Utils;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace TPSSO.Infrastructure.Seeding;
@@ -33,7 +34,7 @@ public class ClientSeeder
     {
         if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
         {
-            await _context.Database.EnsureDeletedAsync();
+            //await _context.Database.EnsureDeletedAsync();
             await _context.Database.EnsureCreatedAsync();
         }
         else
@@ -132,6 +133,9 @@ public class ClientSeeder
 
         // ──────── OAuth 客户端 ────────
 
+        // 字典配置种子数据
+        await SeedDictAsync();
+
         // 用户前端（tpssoweb）
         if (await _manager.FindByClientIdAsync("tpsso_spa_client") == null)
         {
@@ -178,5 +182,121 @@ public class ClientSeeder
                 }
             });
         }
+    }
+
+    // ──────── 字典配置种子数据 ────────
+    private async Task SeedDictAsync()
+    {
+        if (await _context.DictTypes.AnyAsync()) return;
+
+        // 先创建父分类
+        var oauthType = new DictType
+        {
+            Code = "OAuth", Name = "第三方登录", Description = "第三方 OAuth 登录配置", Sort = 1,
+        };
+        var securityType = new DictType
+        {
+            Code = "Security", Name = "安全配置", Description = "JWT、密码策略等安全相关配置", Sort = 2,
+        };
+        var systemType = new DictType
+        {
+            Code = "System", Name = "系统配置", Description = "系统全局配置", Sort = 3,
+        };
+
+        _context.DictTypes.AddRange(oauthType, securityType, systemType);
+        await _context.SaveChangesAsync();
+
+        // 子分类和配置项
+        var types = new List<DictType>
+        {
+            new()
+            {
+                Code = "GitHub", Name = "GitHub", Description = "GitHub OAuth 登录", Sort = 1,
+                ParentId = oauthType.Id,
+                Items =
+                [
+                    new DictItem { Key = "ClientId", Value = "", Description = "GitHub OAuth Client ID", Sort = 1 },
+                    new DictItem { Key = "ClientSecret", Value = "", Description = "GitHub OAuth Client Secret", IsSensitive = true, Sort = 2 },
+                    new DictItem { Key = "CallbackUrl", Value = "", Description = "GitHub OAuth 回调地址", Sort = 3 },
+                ]
+            },
+            new()
+            {
+                Code = "Google", Name = "Google", Description = "Google OAuth 登录", Sort = 2,
+                ParentId = oauthType.Id,
+                Items =
+                [
+                    new DictItem { Key = "ClientId", Value = "", Description = "Google OAuth Client ID", Sort = 1 },
+                    new DictItem { Key = "ClientSecret", Value = "", Description = "Google OAuth Client Secret", IsSensitive = true, Sort = 2 },
+                    new DictItem { Key = "CallbackUrl", Value = "", Description = "Google OAuth 回调地址", Sort = 3 },
+                ]
+            },
+            new()
+            {
+                Code = "WeChat", Name = "微信", Description = "微信 OAuth 登录", Sort = 3,
+                ParentId = oauthType.Id,
+                Items =
+                [
+                    new DictItem { Key = "AppId", Value = "", Description = "微信 App ID", Sort = 1 },
+                    new DictItem { Key = "AppSecret", Value = "", Description = "微信 App Secret", IsSensitive = true, Sort = 2 },
+                    new DictItem { Key = "CallbackUrl", Value = "", Description = "微信回调地址", Sort = 3 },
+                ]
+            },
+            new()
+            {
+                Code = "JWT", Name = "JWT 配置", Description = "JWT Token 过期时间等配置", Sort = 1,
+                ParentId = securityType.Id,
+                Items =
+                [
+                    new DictItem { Key = "AccessTokenExpireMinutes", Value = "120", Description = "Access Token 过期时间（分钟）", Sort = 1 },
+                    new DictItem { Key = "RefreshTokenExpireDays", Value = "7", Description = "Refresh Token 过期时间（天）", Sort = 2 },
+                ]
+            },
+            new()
+            {
+                Code = "Password", Name = "密码策略", Description = "密码强度要求配置", Sort = 2,
+                ParentId = securityType.Id,
+                Items =
+                [
+                    new DictItem { Key = "MinLength", Value = "6", Description = "最小长度", Sort = 1 },
+                    new DictItem { Key = "RequireUppercase", Value = "true", Description = "是否要求大写字母", Sort = 2 },
+                    new DictItem { Key = "RequireLowercase", Value = "true", Description = "是否要求小写字母", Sort = 3 },
+                    new DictItem { Key = "RequireDigit", Value = "true", Description = "是否要求数字", Sort = 4 },
+                    new DictItem { Key = "RequireNonAlphanumeric", Value = "true", Description = "是否要求特殊字符", Sort = 5 },
+                ]
+            },
+            new()
+            {
+                Code = "Upload", Name = "上传配置", Description = "文件上传相关配置", Sort = 1,
+                ParentId = systemType.Id,
+                Items =
+                [
+                    new DictItem { Key = "MaxAvatarSizeKB", Value = "512", Description = "头像最大大小（KB）", Sort = 1 },
+                    new DictItem { Key = "AllowedAvatarTypes", Value = ".jpg,.jpeg,.png,.gif,.webp", Description = "允许的头像文件类型", Sort = 2 },
+                ]
+            },
+            new()
+            {
+                Code = "General", Name = "通用配置", Description = "站点通用配置", Sort = 2,
+                ParentId = systemType.Id,
+                Items =
+                [
+                    new DictItem { Key = "SiteName", Value = "TPSSO", Description = "站点名称", Sort = 1 },
+                    new DictItem { Key = "AllowRegistration", Value = "true", Description = "是否允许注册", Sort = 2 },
+                ]
+            },
+        };
+
+        // 敏感配置加密存储
+        foreach (var type in types)
+        {
+            foreach (var item in type.Items.Where(i => i.IsSensitive && !string.IsNullOrEmpty(i.Value)))
+            {
+                item.Value = AesEncryption.Encrypt(item.Value);
+            }
+        }
+
+        _context.DictTypes.AddRange(types);
+        await _context.SaveChangesAsync();
     }
 }

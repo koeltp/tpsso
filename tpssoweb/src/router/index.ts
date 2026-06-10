@@ -56,6 +56,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '授权' }
       },
       {
+        path: 'github-callback',
+        name: 'GitHubCallback',
+        component: () => import('@/views/GitHubCallback.vue'),
+        meta: { title: 'GitHub 登录回调' }
+      },
+      {
         path: ':pathMatch(.*)*',
         name: 'NotFound',
         component: () => import('@/views/NotFound.vue'),

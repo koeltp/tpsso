@@ -83,6 +83,18 @@ public class AccountService : IAccountService
         return await IssueTokensAsync(user, "刷新成功");
     }
 
+    public async Task<ResponseResult<LoginResult>> ExternalLoginAsync(ExternalLoginModel model)
+    {
+        var user = await _userManager.FindByIdAsync(model.UserId.ToString());
+        if (user == null)
+            return ResponseResult<LoginResult>.NotFound("用户不存在");
+
+        if (await _userManager.IsLockedOutAsync(user))
+            return ResponseResult<LoginResult>.Forbidden("该账号已被禁用，请联系管理员");
+
+        return await IssueTokensAsync(user, "外部登录成功");
+    }
+
     public async Task<ResponseResult<UserInfoResult>> GetCurrentUserAsync(ClaimsPrincipal principal)
     {
         if (principal.Identity?.IsAuthenticated != true)
