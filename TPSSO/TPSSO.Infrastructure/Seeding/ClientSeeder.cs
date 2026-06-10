@@ -33,7 +33,7 @@ public class ClientSeeder
     {
         if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
         {
-            //await _context.Database.EnsureDeletedAsync();
+            await _context.Database.EnsureDeletedAsync();
             await _context.Database.EnsureCreatedAsync();
         }
         else
@@ -76,11 +76,11 @@ public class ClientSeeder
 
         // ──────── 角色 ────────
 
-        if (await _roleManager.FindByNameAsync("Admin") is null)
+        if (await _roleManager.FindByNameAsync(RoleConstants.Admin) is null)
         {
             await _roleManager.CreateAsync(new Role
             {
-                Name = "Admin",
+                Name = RoleConstants.Admin,
                 Description = "系统管理员"
             });
         }
@@ -106,9 +106,9 @@ public class ClientSeeder
         }
 
         // 确保管理员用户拥有 Admin 角色
-        if (adminUser is not null && !await _userManager.IsInRoleAsync(adminUser, "Admin"))
+        if (adminUser is not null && !await _userManager.IsInRoleAsync(adminUser, RoleConstants.Admin))
         {
-            await _userManager.AddToRoleAsync(adminUser, "Admin");
+            await _userManager.AddToRoleAsync(adminUser, RoleConstants.Admin);
         }
 
         // ──────── 测试用户 ────────

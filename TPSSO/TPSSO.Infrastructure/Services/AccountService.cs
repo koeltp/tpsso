@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using TPSSO.Domain.Entities;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -48,6 +49,10 @@ public class AccountService : IAccountService
         if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
             return ResponseResult<LoginResult>.Error(401, "无效的用户名或密码");
 
+        // 检查用户是否被禁用
+        if (await _userManager.IsLockedOutAsync(user))
+            return ResponseResult<LoginResult>.Error(403, "该账号已被禁用，请联系管理员");
+
         // 为 OAuth 授权流程保留 Cookie 登录态
         await _signInManager.SignInAsync(user, isPersistent: model.RememberMe);
 
@@ -66,10 +71,14 @@ public class AccountService : IAccountService
         var user = await _userManager.Users
             .FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
         if (user == null)
-            return ResponseResult<LoginResult>.Error(401, "无效的 Refresh Token");
+            return ResponseResult<LoginResult>.Unauthorized("无效的 Refresh Token");
 
         if (user.RefreshTokenExpiresAt == null || user.RefreshTokenExpiresAt < DateTime.UtcNow)
-            return ResponseResult<LoginResult>.Error(401, "Refresh Token 已过期");
+            return ResponseResult<LoginResult>.Unauthorized("Refresh Token 已过期");
+
+        // 检查用户是否被禁用
+        if (await _userManager.IsLockedOutAsync(user))
+            return ResponseResult<LoginResult>.Forbidden("该账号已被禁用，请联系管理员");
 
         return await IssueTokensAsync(user, "刷新成功");
     }
@@ -144,7 +153,7 @@ public class AccountService : IAccountService
         if (!result.Succeeded)
             return ResponseResult<string>.BadRequest(string.Join("；", result.Errors.Select(e => e.Description)));
 
-        return new ResponseResult<string>(avatarUrl) { Code = 200, Message = "上传成功" };
+        return new ResponseResult<string>(avatarUrl) { Message = "上传成功" };
     }
 
     public async Task<ResponseResult<bool>> SendCodeAsync(SendCodeModel model)
@@ -179,6 +188,9 @@ public class AccountService : IAccountService
         var result = await _userManager.CreateAsync(user, model.Password);
         if (!result.Succeeded)
             return ResponseResult<bool>.BadRequest(string.Join("；", result.Errors.Select(e => e.Description)));
+
+        // 默认分配 User 角色
+        await _userManager.AddToRoleAsync(user, RoleConstants.User);
 
         return ResponseResult<bool>.Success("注册成功");
     }

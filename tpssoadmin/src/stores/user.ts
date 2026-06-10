@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed, readonly } from 'vue'
 import { getUserInfo, type UserInfoResult } from '@/api/auth'
+import { ROLE } from '@/utils/client'
 import {
   exchangeCodeForToken,
   refreshAccessToken as refreshOAuthToken,
@@ -19,7 +20,7 @@ export const useUserStore = defineStore('user', () => {
   let refreshingPromise: Promise<string | null> | null = null
 
   const isAuthenticated = computed(() => !!token.value)
-  const isAdmin = computed(() => userInfo.value?.roles?.includes('Admin') ?? false)
+  const isAdmin = computed(() => userInfo.value?.roles?.includes(ROLE.Admin) ?? false)
 
   /** 设置 token 并持久化到 localStorage */
   function setAuth(accessToken: string, newRefreshToken?: string) {

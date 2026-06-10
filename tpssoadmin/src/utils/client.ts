@@ -1,3 +1,23 @@
+/** 角色名常量，与后端 RoleConstants 保持一致 */
+export const ROLE = {
+  Admin: 'Admin',
+  User: 'User',
+} as const
+
+/** 角色名对应的中文标签 */
+export function roleLabel(role: string): string {
+  switch (role) {
+    case ROLE.Admin: return '管理员'
+    case ROLE.User: return '用户'
+    default: return role
+  }
+}
+
+/** 角色名对应的 Tag 类型 */
+export function roleTagType(role: string): '' | 'danger' | 'info' {
+  return role === ROLE.Admin ? 'danger' : 'info'
+}
+
 /** 客户端状态对应的 Tag 类型 */
 export function statusTagType(status: string): '' | 'success' | 'warning' | 'danger' | 'info' {
   switch (status) {

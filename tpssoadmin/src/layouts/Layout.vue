@@ -70,7 +70,7 @@
 <script setup lang="ts">
 import { ref, computed, markRaw, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { DataBoard, Monitor, ArrowDown, SwitchButton, User, Fold, Expand } from '@element-plus/icons-vue'
+import { DataBoard, Monitor, ArrowDown, SwitchButton, User, Fold, Expand, UserFilled } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useClientStore } from '@/stores/client'
 import logoSrc from '@/assets/logo-icon.png'
@@ -82,13 +82,15 @@ const clientStore = useClientStore()
 const isCollapsed = ref(false)
 
 const activeMenu = computed(() => {
-  if (route.path === '/clients') return '/clients'
+  if (route.path.startsWith('/clients')) return '/clients'
+  if (route.path.startsWith('/users')) return '/users'
   return route.path
 })
 
 const menuItems = [
   { name: '仪表盘', path: '/', icon: markRaw(DataBoard) },
-  { name: '客户端管理', path: '/clients', icon: markRaw(Monitor), badge: () => clientStore.pendingCount }
+  { name: '客户端管理', path: '/clients', icon: markRaw(Monitor), badge: () => clientStore.pendingCount },
+  { name: '用户管理', path: '/users', icon: markRaw(UserFilled) }
 ]
 
 const toggleCollapse = () => {
