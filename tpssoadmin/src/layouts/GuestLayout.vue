@@ -1,5 +1,9 @@
 <template>
-  <div class="guest-container">
+  <!-- Home 页面全屏展示，其他页面居中卡片 -->
+  <div v-if="route.meta.fullPage" class="guest-full">
+    <router-view />
+  </div>
+  <div v-else class="guest-container">
     <div class="bubble bubble-1"></div>
     <div class="bubble bubble-2"></div>
     <div class="bubble bubble-3"></div>
@@ -12,9 +16,19 @@
 </template>
 
 <script setup lang="ts">
+import { useRoute } from 'vue-router'
+
+const route = useRoute()
 </script>
 
 <style scoped>
+/* 全屏模式（Home 页） */
+.guest-full {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* 居中卡片模式（Login/Register/Callback/Forbidden） */
 .guest-container {
   width: 100%;
   min-height: 100vh;

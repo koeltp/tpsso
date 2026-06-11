@@ -121,6 +121,11 @@ export const deleteClient = (id: string): Promise<boolean> => {
   return api.delete(`/api/client/${id}`)
 }
 
+/** 重置客户端密钥（仅机密类型），返回新的明文 Secret */
+export const regenerateClientSecret = (id: string): Promise<ClientCreatedResult> => {
+  return api.post(`/api/client/${id}/regenerate-secret`)
+}
+
 /** 授权用户信息 */
 export interface AuthorizedUserResult {
   username: string

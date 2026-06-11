@@ -52,4 +52,9 @@ public interface IClientService
     /// 获取客户端详情
     /// </summary>
     Task<ResponseResult<ClientResult>> GetByIdAsync(Guid id);
+
+    /// <summary>
+    /// 重置客户端密钥（仅机密类型），返回新的明文 Secret
+    /// </summary>
+    Task<ResponseResult<ClientCreatedResult>> RegenerateSecretAsync(Guid id, Guid userId);
 }
