@@ -34,7 +34,7 @@ public class ClientSeeder
     {
         if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
         {
-            //await _context.Database.EnsureDeletedAsync();
+            await _context.Database.EnsureDeletedAsync();
             await _context.Database.EnsureCreatedAsync();
         }
         else
@@ -135,29 +135,6 @@ public class ClientSeeder
 
         // 字典配置种子数据
         await SeedDictAsync();
-
-        // 用户前端（tpssoweb）
-        if (await _manager.FindByClientIdAsync("tpsso_spa_client") == null)
-        {
-            await _manager.CreateAsync(new OpenIddictApplicationDescriptor
-            {
-                ClientId = "tpsso_spa_client",
-                ConsentType = ConsentTypes.Implicit,
-                DisplayName = "SPA Client",
-                RedirectUris = { new Uri("http://localhost:3007/callback") },
-                PostLogoutRedirectUris = { new Uri("http://localhost:3007") },
-                Permissions =
-                {
-                    Permissions.Endpoints.Authorization,
-                    Permissions.Endpoints.Token,
-                    Permissions.Endpoints.EndSession,
-                    Permissions.ResponseTypes.Code,
-                    Permissions.GrantTypes.AuthorizationCode,
-                    Permissions.Scopes.Email,
-                    Permissions.Scopes.Profile
-                }
-            });
-        }
 
         // 管理后台（tpssoadmin）
         if (await _manager.FindByClientIdAsync("tpsso_admin_client") == null)

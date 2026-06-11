@@ -9,37 +9,3 @@ public class LoginModel
     public string Password { get; set; } = default!;
     public bool RememberMe { get; set; } = false;
 }
-
-/// <summary>
-/// 登录成功返回结果
-/// </summary>
-public class LoginResult
-{
-    /// <summary>Access Token</summary>
-    public string Token { get; set; } = default!;
-
-    /// <summary>Refresh Token</summary>
-    public string RefreshToken { get; set; } = default!;
-
-    /// <summary>Token 过期时间（ISO 8601）</summary>
-    public DateTime ExpiresAt { get; set; }
-
-    /// <summary>用户信息</summary>
-    public UserInfoResult UserInfo { get; set; } = default!;
-}
-
-/// <summary>
-/// 外部登录请求（通过用户 ID 直接签发 Token，仅供外部登录回调内部调用）
-/// </summary>
-public class ExternalLoginModel
-{
-    public Guid UserId { get; set; }
-}
-
-/// <summary>
-/// 刷新 Token 请求
-/// </summary>
-public class RefreshTokenRequest
-{
-    public string RefreshToken { get; set; } = default!;
-}

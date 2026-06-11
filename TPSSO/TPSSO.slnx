@@ -2,5 +2,6 @@
   <Project Path="TPSSO.Domain/TPSSO.Domain.csproj" />
   <Project Path="TPSSO.Application/TPSSO.Application.csproj" />
   <Project Path="TPSSO.Infrastructure/TPSSO.Infrastructure.csproj" />
-  <Project Path="TPSSO.Api/TPSSO.Api.csproj" />
+  <Project Path="Auth/TPSSO.Auth.csproj" />
+  <Project Path="Admin/TPSSO.Admin.csproj" />
 </Solution>

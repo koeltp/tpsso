@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using TPSSO.Domain.Entities;
 
 namespace TPSSO.Application.Models;
@@ -11,5 +12,6 @@ public class ClientSearchCondition
     public string? Keyword { get; set; }
 
     /// <summary>按状态筛选</summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<ClientStatus>))]
     public ClientStatus? Status { get; set; }
 }

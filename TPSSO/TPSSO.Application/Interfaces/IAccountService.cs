@@ -10,9 +10,9 @@ namespace TPSSO.Application.Interfaces;
 public interface IAccountService
 {
     /// <summary>
-    /// 用户登录，返回 JWT Token 和用户信息
+    /// 用户登录（Cookie 认证），返回用户信息
     /// </summary>
-    Task<ResponseResult<LoginResult>> LoginAsync(LoginModel model);
+    Task<ResponseResult<UserInfoResult>> LoginAsync(LoginModel model);
 
     /// <summary>
     /// 用户登出
@@ -38,24 +38,4 @@ public interface IAccountService
     /// 修改密码
     /// </summary>
     Task<ResponseResult<bool>> ChangePasswordAsync(ClaimsPrincipal principal, ChangePasswordModel model);
-
-    /// <summary>
-    /// 发送验证码邮件
-    /// </summary>
-    Task<ResponseResult<bool>> SendCodeAsync(SendCodeModel model);
-
-    /// <summary>
-    /// 用户注册
-    /// </summary>
-    Task<ResponseResult<bool>> RegisterAsync(RegisterModel model);
-
-    /// <summary>
-    /// 使用 Refresh Token 刷新 Access Token
-    /// </summary>
-    Task<ResponseResult<LoginResult>> RefreshTokenAsync(string refreshToken);
-
-    /// <summary>
-    /// 外部登录（通过用户 ID 直接签发 Token）
-    /// </summary>
-    Task<ResponseResult<LoginResult>> ExternalLoginAsync(ExternalLoginModel model);
 }

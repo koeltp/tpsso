@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace TPSSO.Application.Models;
 
 /// <summary>
@@ -24,5 +26,6 @@ public class UserSearchCondition
     public string? Role { get; set; }
 
     /// <summary>按状态筛选</summary>
+    [JsonConverter(typeof(JsonStringEnumConverter<UserStatus>))]
     public UserStatus? Status { get; set; }
 }
