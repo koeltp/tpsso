@@ -111,6 +111,8 @@ builder.Services.AddOpenApi();
 // 注册服务
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IClientService, ClientService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IDictService, DictService>();
 
 var app = builder.Build();
 

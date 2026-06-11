@@ -139,11 +139,11 @@ public class ClientSeeder
         // 管理后台（tpssoadmin）
         if (await _manager.FindByClientIdAsync("tpsso_admin_client") == null)
         {
-            await _manager.CreateAsync(new OpenIddictApplicationDescriptor
+            var openIddictApp = await _manager.CreateAsync(new OpenIddictApplicationDescriptor
             {
                 ClientId = "tpsso_admin_client",
                 ConsentType = ConsentTypes.Implicit,
-                DisplayName = "Admin Client",
+                DisplayName = "TPSSO 管理后台",
                 RedirectUris = { new Uri("http://localhost:3009/callback") },
                 PostLogoutRedirectUris = { new Uri("http://localhost:3009") },
                 Permissions =
@@ -158,6 +158,32 @@ public class ClientSeeder
                     Permissions.Scopes.Roles
                 }
             });
+
+            // 同步创建业务表记录，让管理页面能看到此客户端
+            var openIddictId = (string?)openIddictApp.GetType().GetProperty("Id")?.GetValue(openIddictApp);
+            if (!await _context.ClientApplications.AnyAsync(c => c.ClientId == "tpsso_admin_client"))
+            {
+                var creator = await _userManager.FindByEmailAsync(adminEmail);
+                _context.ClientApplications.Add(new ClientApplication
+                {
+                    ClientId = "tpsso_admin_client",
+                    OpenIddictApplicationId = openIddictId,
+                    Name = "TPSSO 管理后台",
+                    Description = "TPSSO 后台管理系统",
+                    IsPublic = true,
+                    Status = ClientStatus.Approved,
+                    CreatedByUserId = creator?.Id ?? Guid.Empty,
+                    ReviewedByUserId = creator?.Id ?? Guid.Empty,
+                    ReviewedAt = DateTime.UtcNow,
+                    RedirectUris = [new ClientRedirectUri { Uri = "http://localhost:3009/callback" }],
+                    AllowedScopes = [
+                        new ClientScope { Scope = "email" },
+                        new ClientScope { Scope = "profile" },
+                        new ClientScope { Scope = "roles" }
+                    ]
+                });
+                await _context.SaveChangesAsync();
+            }
         }
     }
 
