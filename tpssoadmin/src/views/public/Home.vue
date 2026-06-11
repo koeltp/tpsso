@@ -7,8 +7,15 @@
           <span class="navbar-title">TPSSO</span>
         </router-link>
         <div class="navbar-right">
-          <a class="nav-btn nav-btn-outline" @click="handleLogin">登录</a>
-          <router-link to="/register" class="nav-btn nav-btn-primary">注册</router-link>
+          <template v-if="userStore.isAuthenticated">
+            <span class="nav-user">{{ userStore.userInfo?.userName }}</span>
+            <router-link :to="userStore.isAdmin ? '/admin/dashboard' : '/dashboard'" class="nav-link">进入控制台</router-link>
+            <a class="nav-link" @click="handleLogout">退出</a>
+          </template>
+          <template v-else>
+            <a class="nav-link" @click="handleLogin">登录</a>
+            <router-link to="/register" class="nav-link">注册</router-link>
+          </template>
         </div>
       </div>
     </nav>
@@ -48,10 +55,10 @@
               </div>
             </template>
             <ul class="feature-list">
-              <li>注册 OAuth 客户端应用</li>
-              <li>管理已授权的应用</li>
-              <li>查看客户端授权用户</li>
-              <li>提交客户端审核</li>
+              <li>统一登录，访问所有应用</li>
+              <li>管理已授权的第三方应用</li>
+              <li>查看个人信息与安全设置</li>
+              <li>一键撤销应用授权</li>
             </ul>
           </el-card>
         </el-col>
@@ -65,7 +72,7 @@
             </template>
             <ul class="feature-list">
               <li>注册 OAuth 2.0 客户端</li>
-              <li>获取 Client ID 和 Client Secret</li>
+              <li>获取 Client ID / Secret</li>
               <li>配置回调地址和权限范围</li>
               <li>支持 Authorization Code + PKCE</li>
             </ul>
@@ -83,10 +90,18 @@
 <script setup lang="ts">
 import { Lock, Connection, Key, User, Setting } from '@element-plus/icons-vue'
 import { startOAuthLogin } from '@/utils/oauth'
+import { useUserStore } from '@/stores/user'
 import logoSrc from '@/assets/logo-icon.png'
+
+const userStore = useUserStore()
 
 const handleLogin = () => {
   startOAuthLogin()
+}
+
+const handleLogout = () => {
+  userStore.logout()
+  window.location.href = '/'
 }
 </script>
 
@@ -140,31 +155,22 @@ const handleLogin = () => {
   gap: 12px;
 }
 
-.nav-btn {
+.nav-link {
   font-size: 14px;
   text-decoration: none;
-  padding: 8px 20px;
-  border-radius: 6px;
-  transition: all 0.2s;
+  color: #606266;
+  cursor: pointer;
+  transition: color 0.2s;
 }
 
-.nav-btn-outline {
+.nav-link:hover {
   color: #409eff;
-  border: 1px solid #409eff;
 }
 
-.nav-btn-outline:hover {
-  background: #ecf5ff;
-}
-
-.nav-btn-primary {
-  color: white;
-  background: #409eff;
-  border: 1px solid #409eff;
-}
-
-.nav-btn-primary:hover {
-  background: #66b1ff;
+.nav-user {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
 }
 
 .hero-section {
