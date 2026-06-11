@@ -86,6 +86,15 @@ public class ClientSeeder
             });
         }
 
+        if (await _roleManager.FindByNameAsync(RoleConstants.User) is null)
+        {
+            await _roleManager.CreateAsync(new Role
+            {
+                Name = RoleConstants.User,
+                Description = "普通用户"
+            });
+        }
+
         // ──────── 管理员用户 ────────
 
         const string adminEmail = "admin@taipi.top";
@@ -119,7 +128,7 @@ public class ClientSeeder
 
         if (await _userManager.FindByEmailAsync(testEmail) is null)
         {
-            var user = new User { UserName = testEmail, Email = testEmail };
+            var user = new User { UserName = testEmail, Email = testEmail, NickName = "测试用户" };
             var result = await _userManager.CreateAsync(user, testPassword);
             if (result.Succeeded)
             {
@@ -129,6 +138,13 @@ public class ClientSeeder
             {
                 Console.WriteLine($"创建测试用户失败: {string.Join(", ", result.Errors)}");
             }
+        }
+
+        // 确保测试用户拥有 User 角色
+        var testUser = await _userManager.FindByEmailAsync(testEmail);
+        if (testUser is not null && !await _userManager.IsInRoleAsync(testUser, RoleConstants.User))
+        {
+            await _userManager.AddToRoleAsync(testUser, RoleConstants.User);
         }
 
         // ──────── OAuth 客户端 ────────
