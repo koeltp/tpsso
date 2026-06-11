@@ -137,11 +137,11 @@ public class ClientSeeder
         await SeedDictAsync();
 
         // 管理后台（tpssoadmin）
-        if (await _manager.FindByClientIdAsync("tpsso_admin_client") == null)
+        if (await _manager.FindByClientIdAsync(SystemClientIds.AdminClient) == null)
         {
             var openIddictApp = await _manager.CreateAsync(new OpenIddictApplicationDescriptor
             {
-                ClientId = "tpsso_admin_client",
+                ClientId = SystemClientIds.AdminClient,
                 ConsentType = ConsentTypes.Implicit,
                 DisplayName = "TPSSO 管理后台",
                 RedirectUris = { new Uri("http://localhost:3009/callback") },
@@ -161,12 +161,12 @@ public class ClientSeeder
 
             // 同步创建业务表记录，让管理页面能看到此客户端
             var openIddictId = (string?)openIddictApp.GetType().GetProperty("Id")?.GetValue(openIddictApp);
-            if (!await _context.ClientApplications.AnyAsync(c => c.ClientId == "tpsso_admin_client"))
+            if (!await _context.ClientApplications.AnyAsync(c => c.ClientId == SystemClientIds.AdminClient))
             {
                 var creator = await _userManager.FindByEmailAsync(adminEmail);
                 _context.ClientApplications.Add(new ClientApplication
                 {
-                    ClientId = "tpsso_admin_client",
+                    ClientId = SystemClientIds.AdminClient,
                     OpenIddictApplicationId = openIddictId,
                     Name = "TPSSO 管理后台",
                     Description = "TPSSO 后台管理系统",

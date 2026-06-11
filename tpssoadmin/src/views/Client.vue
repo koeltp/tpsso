@@ -4,6 +4,10 @@
       <template #header>
         <div class="card-header">
           <span class="page-title">客户端管理</span>
+          <el-button type="primary" @click="handleCreate">
+            <el-icon><Plus /></el-icon>
+            新增客户端
+          </el-button>
         </div>
       </template>
 
@@ -67,11 +71,16 @@
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" align="center" fixed="right">
+        <el-table-column label="操作" width="280" align="center" fixed="right">
           <template #default="{ row }">
+            <el-button type="primary" link size="small" @click="handleDetail(row)">详情</el-button>
+            <el-button v-if="row.status === 'Draft'" type="primary" link size="small" @click="handleEdit(row)">编辑</el-button>
+            <el-button v-if="row.status === 'Draft'" type="warning" link size="small" @click="handleSubmit(row.id)">提交审核</el-button>
+            <el-button v-if="row.status === 'Pending'" type="info" link size="small" @click="handleWithdraw(row.id)">撤回</el-button>
             <el-button v-if="row.status === 'Pending'" type="success" link size="small" @click="handleApprove(row.id)">通过</el-button>
             <el-button v-if="row.status === 'Pending'" type="danger" link size="small" @click="handleReject(row)">拒绝</el-button>
-            <el-button type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
+            <el-button v-if="row.status === 'Rejected'" type="primary" link size="small" @click="handleEdit(row)">编辑</el-button>
+            <el-button v-if="row.status !== 'Approved'" type="danger" link size="small" @click="handleDelete(row.id)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -91,6 +100,75 @@
       </div>
     </el-card>
 
+    <!-- 新增/编辑对话框 -->
+    <el-dialog v-model="formDialogVisible" :title="isEdit ? '编辑客户端' : '新增客户端'" width="600px" @closed="resetForm">
+      <el-form ref="formRef" :model="form" :rules="formRules" label-width="100px">
+        <el-form-item label="应用名称" prop="name">
+          <el-input v-model="form.name" placeholder="请输入应用名称" />
+        </el-form-item>
+        <el-form-item label="应用描述" prop="description">
+          <el-input v-model="form.description" type="textarea" :rows="2" placeholder="请输入应用描述" />
+        </el-form-item>
+        <el-form-item label="客户端类型" prop="isPublic">
+          <el-radio-group v-model="form.isPublic" :disabled="isEdit">
+            <el-radio :value="true">公开（SPA/移动端）</el-radio>
+            <el-radio :value="false">机密（服务端）</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="回调地址" prop="redirectUris">
+          <el-input
+            v-model="form.redirectUris"
+            type="textarea"
+            :rows="3"
+            placeholder="每行一个回调地址，例如：&#10;http://localhost:3000/callback&#10;https://example.com/callback"
+          />
+        </el-form-item>
+        <el-form-item label="授权范围" prop="allowedScopes">
+          <el-checkbox-group v-model="scopeList">
+            <el-checkbox label="openid" value="openid" />
+            <el-checkbox label="profile" value="profile" />
+            <el-checkbox label="email" value="email" />
+            <el-checkbox label="roles" value="roles" />
+          </el-checkbox-group>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="formDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="formLoading" @click="confirmForm">确认</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 详情对话框 -->
+    <el-dialog v-model="detailDialogVisible" title="客户端详情" width="600px">
+      <template v-if="detail">
+        <el-descriptions :column="1" border>
+          <el-descriptions-item label="应用名称">{{ detail.name }}</el-descriptions-item>
+          <el-descriptions-item label="Client ID">
+            <code>{{ detail.clientId }}</code>
+          </el-descriptions-item>
+          <el-descriptions-item v-if="createdSecret" label="Client Secret">
+            <div class="secret-area">
+              <code>{{ createdSecret }}</code>
+              <el-button type="primary" link size="small" @click="copySecret">复制</el-button>
+              <span class="secret-hint">仅显示一次，请妥善保存</span>
+            </div>
+          </el-descriptions-item>
+          <el-descriptions-item label="客户端类型">{{ detail.isPublic ? '公开（SPA/移动端）' : '机密（服务端）' }}</el-descriptions-item>
+          <el-descriptions-item label="状态">
+            <el-tag :type="statusTagType(detail.status)" size="small">{{ statusLabel(detail.status) }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item v-if="detail.description" label="描述">{{ detail.description }}</el-descriptions-item>
+          <el-descriptions-item label="回调地址">
+            <div v-for="uri in detail.redirectUris.split('\n')" :key="uri" class="redirect-uri">{{ uri }}</div>
+          </el-descriptions-item>
+          <el-descriptions-item label="授权范围">{{ detail.allowedScopes }}</el-descriptions-item>
+          <el-descriptions-item v-if="detail.reviewRemark" label="审核备注">{{ detail.reviewRemark }}</el-descriptions-item>
+          <el-descriptions-item label="创建时间">{{ formatDate(detail.createdAt) }}</el-descriptions-item>
+          <el-descriptions-item v-if="detail.updatedAt" label="更新时间">{{ formatDate(detail.updatedAt) }}</el-descriptions-item>
+        </el-descriptions>
+      </template>
+    </el-dialog>
+
     <!-- 拒绝对话框 -->
     <el-dialog v-model="rejectDialogVisible" title="拒绝审核" width="450px">
       <el-form ref="rejectFormRef" :model="rejectForm" :rules="rejectRules" label-width="80px">
@@ -107,12 +185,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
-import { deleteClient, approveClient, rejectClient, type ClientResult } from '@/api/client'
+import { Search, Plus } from '@element-plus/icons-vue'
+import {
+  createClient, updateClient, submitClient, withdrawClient,
+  approveClient, rejectClient, deleteClient, getClientById,
+  type ClientResult, type ClientCreatedResult
+} from '@/api/client'
 import { statusTagType, statusLabel, formatDate } from '@/utils/client'
 import { useClientStore } from '@/stores/client'
 
@@ -162,6 +244,154 @@ const fetchClients = async () => {
   }
 }
 
+// ──────── 新增/编辑 ────────
+
+const formDialogVisible = ref(false)
+const formLoading = ref(false)
+const isEdit = ref(false)
+const editingId = ref('')
+const formRef = ref<FormInstance>()
+const createdSecret = ref('')
+
+const form = reactive({
+  name: '',
+  description: '',
+  redirectUris: '',
+  allowedScopes: 'openid profile email',
+  isPublic: true,
+  rowVersion: ''
+})
+
+const scopeList = computed({
+  get: () => form.allowedScopes.split(' ').filter(s => s),
+  set: (val: string[]) => { form.allowedScopes = val.join(' ') }
+})
+
+const formRules: FormRules = {
+  name: [{ required: true, message: '请输入应用名称', trigger: 'blur' }],
+  redirectUris: [{ required: true, message: '请输入回调地址', trigger: 'blur' }]
+}
+
+const handleCreate = () => {
+  isEdit.value = false
+  editingId.value = ''
+  createdSecret.value = ''
+  formDialogVisible.value = true
+}
+
+const handleEdit = async (row: ClientResult) => {
+  isEdit.value = true
+  editingId.value = row.id
+  createdSecret.value = ''
+  form.name = row.name
+  form.description = row.description || ''
+  form.redirectUris = row.redirectUris
+  form.allowedScopes = row.allowedScopes
+  form.isPublic = row.isPublic
+  form.rowVersion = row.rowVersion || ''
+  formDialogVisible.value = true
+}
+
+const confirmForm = async () => {
+  if (!formRef.value) return
+  const valid = await formRef.value.validate().catch(() => false)
+  if (!valid) return
+
+  formLoading.value = true
+  try {
+    if (isEdit.value) {
+      await updateClient(editingId.value, {
+        name: form.name,
+        description: form.description || undefined,
+        redirectUris: form.redirectUris,
+        allowedScopes: form.allowedScopes,
+        rowVersion: form.rowVersion || undefined
+      })
+      ElMessage.success('更新成功')
+    } else {
+      const result = await createClient({
+        name: form.name,
+        description: form.description || undefined,
+        redirectUris: form.redirectUris,
+        allowedScopes: form.allowedScopes,
+        isPublic: form.isPublic
+      })
+      // 机密客户端创建后显示 Secret
+      if (result.plainSecret) {
+        createdSecret.value = result.plainSecret
+      }
+      ElMessage.success('创建成功')
+    }
+    formDialogVisible.value = !createdSecret.value // 有 Secret 时保持弹窗显示
+    fetchClients()
+  } catch {
+    // 拦截器已处理
+  } finally {
+    formLoading.value = false
+  }
+}
+
+const resetForm = () => {
+  form.name = ''
+  form.description = ''
+  form.redirectUris = ''
+  form.allowedScopes = 'openid profile email'
+  form.isPublic = true
+  form.rowVersion = ''
+  createdSecret.value = ''
+}
+
+const copySecret = async () => {
+  try {
+    await navigator.clipboard.writeText(createdSecret.value)
+    ElMessage.success('已复制到剪贴板')
+  } catch {
+    ElMessage.warning('复制失败，请手动复制')
+  }
+}
+
+// ──────── 详情 ────────
+
+const detailDialogVisible = ref(false)
+const detail = ref<ClientResult | null>(null)
+
+const handleDetail = async (row: ClientResult) => {
+  try {
+    detail.value = await getClientById(row.id)
+    detailDialogVisible.value = true
+  } catch {
+    // 拦截器已处理
+  }
+}
+
+// ──────── 提交审核/撤回 ────────
+
+const handleSubmit = async (id: string) => {
+  try {
+    await ElMessageBox.confirm('确认提交审核？提交后不可修改，需等待管理员审批。', '提交审核', { type: 'warning' })
+    await submitClient(id)
+    ElMessage.success('已提交审核')
+    fetchClients()
+    clientStore.fetchPendingCount()
+  } catch {
+    // 拦截器已处理或用户取消
+  }
+}
+
+const handleWithdraw = async (id: string) => {
+  try {
+    await ElMessageBox.confirm('确认撤回审核？撤回后可重新编辑。', '撤回审核', { type: 'warning' })
+    await withdrawClient(id)
+    ElMessage.success('已撤回')
+    fetchClients()
+    clientStore.fetchPendingCount()
+  } catch {
+    // 拦截器已处理或用户取消
+  }
+}
+
+// ──────── 审核通过/拒绝 ────────
+
 const handleApprove = async (id: string) => {
   try {
     await ElMessageBox.confirm('确认通过此客户端的审核？', '审核确认', { type: 'success' })
@@ -207,6 +437,8 @@ const confirmReject = async () => {
     rejectLoading.value = false
   }
 }
+
+// ──────── 删除 ────────
 
 const handleDelete = async (id: string) => {
   try {
@@ -268,5 +500,25 @@ code {
   border-radius: 4px;
   font-size: 13px;
   color: #1890ff;
+}
+
+.secret-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.secret-area code {
+  color: #e6a23c;
+  font-weight: 600;
+}
+
+.secret-hint {
+  color: #e6a23c;
+  font-size: 12px;
+}
+
+.redirect-uri {
+  padding: 2px 0;
 }
 </style>

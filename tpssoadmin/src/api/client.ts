@@ -12,8 +12,32 @@ export interface ClientResult {
   isPublic: boolean
   status: string
   reviewRemark?: string
+  rowVersion?: string
   createdAt: string
   updatedAt?: string
+}
+
+export interface ClientCreatedResult extends ClientResult {
+  /** 明文 Secret，仅创建时返回一次 */
+  plainSecret?: string
+}
+
+export interface CreateClientRequest {
+  name: string
+  description?: string
+  logo?: string
+  redirectUris: string
+  allowedScopes?: string
+  isPublic?: boolean
+}
+
+export interface UpdateClientRequest {
+  name: string
+  description?: string
+  logo?: string
+  redirectUris: string
+  allowedScopes?: string
+  rowVersion?: string
 }
 
 export interface RejectClientRequest {
@@ -50,6 +74,26 @@ export const searchClients = (pager: SearchPager<ClientSearchCondition>): Promis
 /** 客户端详情 */
 export const getClientById = (id: string): Promise<ClientResult> => {
   return api.get(`/api/client/${id}`)
+}
+
+/** 创建客户端 */
+export const createClient = (data: CreateClientRequest): Promise<ClientCreatedResult> => {
+  return api.post('/api/client', data)
+}
+
+/** 更新客户端 */
+export const updateClient = (id: string, data: UpdateClientRequest): Promise<boolean> => {
+  return api.put(`/api/client/${id}`, data)
+}
+
+/** 提交审核 */
+export const submitClient = (id: string): Promise<boolean> => {
+  return api.post(`/api/client/${id}/submit`)
+}
+
+/** 撤回审核 */
+export const withdrawClient = (id: string): Promise<boolean> => {
+  return api.post(`/api/client/${id}/withdraw`)
 }
 
 /** 审核通过 */

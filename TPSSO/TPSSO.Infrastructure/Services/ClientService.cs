@@ -236,6 +236,11 @@ public class ClientService : IClientService
         var client = await FindClientAsync(id);
         if (client == null)
             return ResponseResult<bool>.NotFound("客户端不存在");
+
+        // 系统内置客户端禁止删除
+        if (client.ClientId == SystemClientIds.AdminClient)
+            return ResponseResult<bool>.BadRequest("系统内置客户端，禁止删除");
+
         if (client.CreatedByUserId != userId)
             return ResponseResult<bool>.Forbidden("无权删除此客户端");
 
