@@ -43,19 +43,23 @@
       <!-- 侧边栏 -->
       <aside class="sidebar" :class="{ collapsed: isCollapsed }">
         <div class="menu-list">
-          <div
-            v-for="item in menuItems"
-            :key="item.path"
-            :class="['menu-item', { active: activeMenu === item.path }]"
-            @click="router.push(item.path)"
-          >
-            <el-icon class="menu-icon"><component :is="item.icon" /></el-icon>
-            <span v-show="!isCollapsed">{{ item.name }}</span>
-            <span
-              v-if="item.badge && item.badge() > 0 && !isCollapsed"
-              class="menu-badge-dot"
-            />
-          </div>
+          <template v-for="item in menuItems" :key="item.name">
+            <!-- 分割线 -->
+            <div v-if="item.name === 'divider'" class="menu-divider" />
+            <!-- 菜单项 -->
+            <div
+              v-else
+              :class="['menu-item', { active: activeMenu === item.path }]"
+              @click="router.push(item.path)"
+            >
+              <el-icon class="menu-icon"><component :is="item.icon" /></el-icon>
+              <span v-show="!isCollapsed">{{ item.name }}</span>
+              <span
+                v-if="item.badge && item.badge() > 0 && !isCollapsed"
+                class="menu-badge-dot"
+              />
+            </div>
+          </template>
         </div>
       </aside>
 
@@ -70,7 +74,7 @@
 <script setup lang="ts">
 import { ref, computed, markRaw, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { DataBoard, Monitor, ArrowDown, SwitchButton, User, Fold, Expand, UserFilled, Setting } from '@element-plus/icons-vue'
+import { DataBoard, Monitor, ArrowDown, SwitchButton, User, Fold, Expand, UserFilled, Setting, Key, Grid } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useClientStore } from '@/stores/client'
 import logoSrc from '@/assets/logo-icon.png'
@@ -82,17 +86,37 @@ const clientStore = useClientStore()
 const isCollapsed = ref(false)
 
 const activeMenu = computed(() => {
+  if (route.path.startsWith('/my-clients')) return '/my-clients'
+  if (route.path.startsWith('/my-apps')) return '/my-apps'
   if (route.path.startsWith('/clients')) return '/clients'
   if (route.path.startsWith('/users')) return '/users'
+  if (route.path.startsWith('/dict')) return '/dict'
   return route.path
 })
 
-const menuItems = [
-  { name: '仪表盘', path: '/', icon: markRaw(DataBoard) },
-  { name: '客户端管理', path: '/clients', icon: markRaw(Monitor), badge: () => clientStore.pendingCount },
+// 用户菜单：所有登录用户可见
+const userMenuItems = [
+  { name: '我的客户端', path: '/my-clients', icon: markRaw(Monitor) },
+  { name: '我的授权', path: '/my-apps', icon: markRaw(Key) }
+]
+
+// 管理菜单：仅 Admin 可见
+const adminMenuItems = [
+  { name: '客户端管理', path: '/clients', icon: markRaw(Grid), badge: () => clientStore.pendingCount },
   { name: '用户管理', path: '/users', icon: markRaw(UserFilled) },
   { name: '配置管理', path: '/dict', icon: markRaw(Setting) }
 ]
+
+// 根据角色合并菜单（仪表盘始终显示，个人中心从头像入口进入）
+const menuItems = computed(() => {
+  const items: typeof userMenuItems = [{ name: '仪表盘', path: '/', icon: markRaw(DataBoard) }]
+  items.push(...userMenuItems)
+  if (userStore.isAdmin) {
+    items.push({ name: 'divider', path: '', icon: null as any })
+    items.push(...adminMenuItems)
+  }
+  return items
+})
 
 const toggleCollapse = () => {
   isCollapsed.value = !isCollapsed.value
@@ -102,7 +126,10 @@ onMounted(async () => {
   if (!userStore.userInfo) {
     await userStore.fetchUserInfo()
   }
-  clientStore.fetchPendingCount()
+  // Admin 用户加载待审核数量
+  if (userStore.isAdmin) {
+    clientStore.fetchPendingCount()
+  }
 })
 
 const doLogout = () => {
@@ -266,6 +293,12 @@ const doLogout = () => {
   background: #f56c6c;
   margin-left: 6px;
   flex-shrink: 0;
+}
+
+.menu-divider {
+  height: 1px;
+  background: #3d4f6a;
+  margin: 8px 16px;
 }
 
 /* 内容区 */

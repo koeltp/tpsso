@@ -15,24 +15,42 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/Dashboard.vue')
       },
       {
+        path: 'profile',
+        name: 'Profile',
+        component: () => import('@/views/Profile.vue')
+      },
+      {
+        path: 'my-clients',
+        name: 'MyClients',
+        component: () => import('@/views/MyClients.vue')
+      },
+      {
+        path: 'my-clients/:id/users',
+        name: 'ClientUsers',
+        component: () => import('@/views/ClientUsers.vue')
+      },
+      {
+        path: 'my-apps',
+        name: 'MyApps',
+        component: () => import('@/views/MyApps.vue')
+      },
+      {
         path: 'clients',
         name: 'Clients',
-        component: () => import('@/views/Client.vue')
+        component: () => import('@/views/Client.vue'),
+        meta: { requiresAdmin: true }
       },
       {
         path: 'users',
         name: 'Users',
-        component: () => import('@/views/User.vue')
+        component: () => import('@/views/User.vue'),
+        meta: { requiresAdmin: true }
       },
       {
         path: 'dict',
         name: 'Dict',
-        component: () => import('@/views/Dict.vue')
-      },
-      {
-        path: 'profile',
-        name: 'Profile',
-        component: () => import('@/views/Profile.vue')
+        component: () => import('@/views/Dict.vue'),
+        meta: { requiresAdmin: true }
       }
     ]
   },
@@ -70,7 +88,7 @@ const router = createRouter({
   routes
 })
 
-// 路由守卫：未登录跳转 SSO 授权，非管理员跳转无权限页
+// 路由守卫：未登录跳转 SSO 授权，非管理员访问管理页面跳转 Forbidden
 router.beforeEach(async (to) => {
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   if (requiresAuth) {
@@ -83,7 +101,9 @@ router.beforeEach(async (to) => {
     if (!userStore.userInfo) {
       await userStore.fetchUserInfo()
     }
-    if (!userStore.isAdmin) {
+    // Admin 专属页面检查
+    const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
+    if (requiresAdmin && !userStore.isAdmin) {
       return { name: 'Forbidden' }
     }
   }

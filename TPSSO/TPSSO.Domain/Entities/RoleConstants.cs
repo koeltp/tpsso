@@ -16,4 +16,7 @@ public static class SystemClientIds
 {
     /// <summary>管理后台客户端</summary>
     public const string AdminClient = "tpsso_admin_client";
+
+    /// <summary>用户门户客户端</summary>
+    public const string PortalClient = "tpsso_portal_client";
 }

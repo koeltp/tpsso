@@ -71,6 +71,16 @@ export const searchClients = (pager: SearchPager<ClientSearchCondition>): Promis
   return api.post('/api/client/search', pager)
 }
 
+/** 搜索我的客户端（当前用户创建的，分页） */
+export const searchMyClients = (pager: SearchPager<ClientSearchCondition>): Promise<PagerResponse<ClientResult>> => {
+  return api.post('/api/client/my/search', pager)
+}
+
+/** 获取客户端的授权用户列表 */
+export const getClientAuthorizedUsers = (clientId: string, pager: { pageIndex: number; pageSize: number; keyword?: string }): Promise<PagerResponse<AuthorizedUserResult>> => {
+  return api.post(`/api/client/${clientId}/authorized-users`, pager)
+}
+
 /** 客户端详情 */
 export const getClientById = (id: string): Promise<ClientResult> => {
   return api.get(`/api/client/${id}`)
@@ -109,4 +119,29 @@ export const rejectClient = (id: string, data: RejectClientRequest): Promise<boo
 /** 删除客户端 */
 export const deleteClient = (id: string): Promise<boolean> => {
   return api.delete(`/api/client/${id}`)
+}
+
+/** 授权用户信息 */
+export interface AuthorizedUserResult {
+  username: string
+  nickName?: string
+  authorizedAt: string
+}
+
+/** 我的授权记录 */
+export interface AuthorizationResult {
+  id: string
+  clientName: string
+  scopes: string[]
+  createdAt: string
+}
+
+/** 获取我的授权列表 */
+export const getMyAuthorizations = (): Promise<AuthorizationResult[]> => {
+  return api.get('/api/authorization/my')
+}
+
+/** 撤销授权 */
+export const revokeAuthorization = (id: string): Promise<boolean> => {
+  return api.delete(`/api/authorization/${id}`)
 }

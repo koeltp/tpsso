@@ -185,6 +185,55 @@ public class ClientSeeder
                 await _context.SaveChangesAsync();
             }
         }
+
+        // 用户门户（tpssoportal）
+        if (await _manager.FindByClientIdAsync(SystemClientIds.PortalClient) == null)
+        {
+            var openIddictApp = await _manager.CreateAsync(new OpenIddictApplicationDescriptor
+            {
+                ClientId = SystemClientIds.PortalClient,
+                ConsentType = ConsentTypes.Implicit,
+                DisplayName = "TPSSO 用户门户",
+                RedirectUris = { new Uri("http://localhost:3011/callback") },
+                PostLogoutRedirectUris = { new Uri("http://localhost:3011") },
+                Permissions =
+                {
+                    Permissions.Endpoints.Authorization,
+                    Permissions.Endpoints.Token,
+                    Permissions.Endpoints.EndSession,
+                    Permissions.ResponseTypes.Code,
+                    Permissions.GrantTypes.AuthorizationCode,
+                    Permissions.Scopes.Email,
+                    Permissions.Scopes.Profile,
+                    Permissions.Scopes.Roles
+                }
+            });
+
+            var openIddictId = (string?)openIddictApp.GetType().GetProperty("Id")?.GetValue(openIddictApp);
+            if (!await _context.ClientApplications.AnyAsync(c => c.ClientId == SystemClientIds.PortalClient))
+            {
+                var creator = await _userManager.FindByEmailAsync(adminEmail);
+                _context.ClientApplications.Add(new ClientApplication
+                {
+                    ClientId = SystemClientIds.PortalClient,
+                    OpenIddictApplicationId = openIddictId,
+                    Name = "TPSSO 用户门户",
+                    Description = "TPSSO 用户自助服务门户",
+                    IsPublic = true,
+                    Status = ClientStatus.Approved,
+                    CreatedByUserId = creator?.Id ?? Guid.Empty,
+                    ReviewedByUserId = creator?.Id ?? Guid.Empty,
+                    ReviewedAt = DateTime.UtcNow,
+                    RedirectUris = [new ClientRedirectUri { Uri = "http://localhost:3011/callback" }],
+                    AllowedScopes = [
+                        new ClientScope { Scope = "email" },
+                        new ClientScope { Scope = "profile" },
+                        new ClientScope { Scope = "roles" }
+                    ]
+                });
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 
     // ──────── 字典配置种子数据 ────────
