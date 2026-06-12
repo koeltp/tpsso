@@ -8,7 +8,7 @@
         </router-link>
         <div class="navbar-right">
           <template v-if="userStore.isAuthenticated">
-            <span class="nav-user">{{ userStore.userInfo?.userName }}</span>
+            <span class="nav-user">{{ userStore.userInfo?.nickName }}</span>
             <router-link :to="userStore.isAdmin ? '/admin/dashboard' : '/dashboard'" class="nav-link">进入控制台</router-link>
             <a class="nav-link" @click="handleLogout">退出</a>
           </template>

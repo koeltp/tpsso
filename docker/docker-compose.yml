@@ -10,6 +10,8 @@ services:
     ports:
       - "7086:80"
     volumes:
+      - ./config/certbot/encryption.pfx:/app/certbot/encryption.pfx
+      - ./config/certbot/signing.pfx:/app/certbot/signing.pfx
       - ./config/authapi/appsettings.Production.json:/app/appsettings.Production.json:ro
     networks:
       - app

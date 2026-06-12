@@ -23,7 +23,7 @@
             default-expand-all
             @node-click="handleNodeClick"
           >
-            <template #default="{ node, data }">
+            <template #default="{  data }">
               <div class="tree-node">
                 <span class="tree-label">{{ data.name }}</span>
                 <span class="tree-actions">
@@ -346,7 +346,7 @@ const confirmItem = async () => {
     await saveDictItem(selectedType.value.id, {
       id: itemForm.id || undefined,
       key: itemForm.key,
-      value: submitValue,
+      value: submitValue||'',
       description: itemForm.description || undefined,
       isSensitive: itemForm.isSensitive,
       sort: itemForm.sort,

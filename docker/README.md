@@ -132,3 +132,17 @@ docker/
 ```
 
 其他 Dockerfile 和 nginx.conf 在各自项目目录下，构建脚本自动引用，一般无需手动修改。
+# 加密证书
+openssl req -x509 -newkey rsa:2048 -nodes \
+  -keyout encryption.key \
+  -out encryption.crt \
+  -days 3650 \
+  -subj "//CN=TPSSO-Encryption" \
+  -addext "keyUsage = keyEncipherment, digitalSignature" \
+  -addext "extendedKeyUsage = clientAuth, serverAuth"
+# 导出加密证书
+openssl pkcs12 -export -out encryption.pfx -inkey encryption.key -in encryption.crt -passout pass:xxx  
+# 签名证书
+openssl req -x509 -newkey rsa:2048 -nodes -keyout signing.key -out signing.crt -days 3650 -subj "//CN=TPSSO-Signing" 
+# 导出签名证书
+openssl pkcs12 -export -out signing.pfx -inkey signing.key -in signing.crt -passout pass:xxx
