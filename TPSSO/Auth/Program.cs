@@ -68,7 +68,9 @@ builder.Services.AddOpenIddict()
     })
     .AddServer(options =>
     {
-        options.SetIssuer("https://auth.taipi.top");
+        // Issuer 从 SsoOptions.LoginBaseUrl 读取，生产环境通过 appsettings.Production.json 配置
+        var ssoOptions = builder.Configuration.GetSection(SsoOptions.SectionName).Get<SsoOptions>()!;
+        options.SetIssuer(ssoOptions.Issuer);
         options.SetAuthorizationEndpointUris("/connect/authorize")
                .SetTokenEndpointUris("/connect/token")
                .SetUserInfoEndpointUris("/connect/userinfo")

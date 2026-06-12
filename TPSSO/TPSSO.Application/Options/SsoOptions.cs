@@ -10,6 +10,9 @@ public class SsoOptions
     /// <summary>统一登录页基础地址</summary>
     public string LoginBaseUrl { get; set; } = "http://localhost:3010";
 
+    /// <summary>OpenIddict Issuer</summary>
+    public string Issuer => LoginBaseUrl;
+
     /// <summary>自定义登录页路径</summary>
     public string LoginPath { get; set; } = "/login";
 

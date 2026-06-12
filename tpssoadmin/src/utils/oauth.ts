@@ -11,7 +11,7 @@ const SCOPES = import.meta.env.VITE_OAUTH_SCOPE || 'openid profile email roles'
 const CODE_VERIFIER_KEY = 'admin_code_verifier'
 const REDIRECT_KEY = 'admin_redirect'
 // 在文件顶部添加
-const VITE_SSO_URL = import.meta.env.VITE_AUTH_URL || 'https://auth.taipi.top'
+const VITE_SSO_URL = import.meta.env.VITE_SSO_URL || 'https://auth.taipi.top'
 
 /** 生成随机字符串 */
 function randomString(length: number): string {
