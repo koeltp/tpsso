@@ -73,9 +73,9 @@ const handleSubmit = async () => {
     } else if (returnUrl.value && returnUrl.value !== '/') {
       router.push(returnUrl.value)
     } else {
-      // 无回调地址时跳转管理后台
+      // 无回调地址时跳转管理后台（走 /dashboard 触发 OAuth 流程）
       const adminUrl = import.meta.env.VITE_ADMIN_URL || 'http://localhost:3009'
-      window.location.href = adminUrl
+      window.location.href = adminUrl + '/dashboard'
     }
   } catch {
     // 拦截器已处理
