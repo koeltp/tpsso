@@ -1,7 +1,7 @@
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 
-RUN adduser --disabled-password --gecos "" appuser
+RUN useradd -m -s /bin/bash appuser
 
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 

@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$Target = "all",
     [switch]$SkipBuild
 )
@@ -29,7 +29,7 @@ function Build-AuthApi {
     if ($LASTEXITCODE -ne 0) { Write-Host "  Auth 编译失败" -ForegroundColor Red; return $false }
 
     Write-Host "  构建镜像 ${Registry}:authapi ..." -ForegroundColor Gray
-    docker build -t "${Registry}:authapi" $srcDir
+    docker build --progress=plain --no-cache -t "${Registry}:authapi" $srcDir
     if ($LASTEXITCODE -ne 0) { Write-Host "  Auth 镜像构建失败" -ForegroundColor Red; return $false }
 
     Remove-Item -Recurse -Force $publishDir
@@ -47,7 +47,7 @@ function Build-AdminApi {
     if ($LASTEXITCODE -ne 0) { Write-Host "  Admin 编译失败" -ForegroundColor Red; return $false }
 
     Write-Host "  构建镜像 ${Registry}:adminapi ..." -ForegroundColor Gray
-    docker build -t "${Registry}:adminapi" $srcDir
+    docker build --progress=plain --no-cache -t "${Registry}:adminapi" $srcDir
     if ($LASTEXITCODE -ne 0) { Write-Host "  Admin 镜像构建失败" -ForegroundColor Red; return $false }
 
     Remove-Item -Recurse -Force $publishDir
@@ -59,7 +59,7 @@ function Build-AuthWeb {
 
     # tpssoauth 使用多阶段 Dockerfile（内含 npm ci + npm run build），无需本地构建
     Write-Host "  构建镜像 ${Registry}:authweb（多阶段构建）..." -ForegroundColor Gray
-    docker build -t "${Registry}:authweb" $srcDir
+    docker build --progress=plain --no-cache -t "${Registry}:authweb" $srcDir
     if ($LASTEXITCODE -ne 0) { Write-Host "  authweb 镜像构建失败" -ForegroundColor Red; return $false }
 
     return $true
@@ -76,7 +76,7 @@ function Build-AdminWeb {
     Pop-Location
 
     Write-Host "  构建镜像 ${Registry}:adminweb ..." -ForegroundColor Gray
-    docker build -t "${Registry}:adminweb" $srcDir
+    docker build --progress=plain --no-cache -t "${Registry}:adminweb" $srcDir
     if ($LASTEXITCODE -ne 0) { Write-Host "  adminweb 镜像构建失败" -ForegroundColor Red; return $false }
 
     return $true
