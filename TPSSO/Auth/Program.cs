@@ -52,9 +52,10 @@ builder.Services.Configure<IdentityOptions>(options =>
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/login";
-    options.Cookie.Domain = ".taipi.top";
+    // options.Cookie.Domain = ".taipi.top";
     options.Cookie.SameSite=SameSiteMode.Lax;
     options.Cookie.SecurePolicy=CookieSecurePolicy.Always;
+
 });
 
 // 3. OpenIddict 完整配置（Server + Core + Validation）
@@ -67,7 +68,7 @@ builder.Services.AddOpenIddict()
     })
     .AddServer(options =>
     {
-        options.SetIssuer("https://authapi.taipi.top");
+        options.SetIssuer("https://auth.taipi.top");
         options.SetAuthorizationEndpointUris("/connect/authorize")
                .SetTokenEndpointUris("/connect/token")
                .SetUserInfoEndpointUris("/connect/userinfo")

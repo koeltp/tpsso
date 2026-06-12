@@ -15,11 +15,6 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3009,
       proxy: {
-        '/connect': {
-          target: env.VITE_AUTH_TARGET,
-          changeOrigin: true,
-          secure: false
-        },
         '/api': {
           target: env.VITE_API_TARGET,
           changeOrigin: true,
