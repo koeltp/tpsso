@@ -4,6 +4,43 @@ import { startOAuthLogin } from '@/utils/oauth'
 import { useUserStore } from '@/stores/user'
 
 const routes: RouteRecordRaw[] = [
+  // ──────── 文档页面（DocsLayout，无需登录） ────────
+  {
+    path: '/docs',
+    component: () => import('@/layouts/DocsLayout.vue'),
+    children: [
+      {
+        path: '',
+        redirect: '/docs/quick-start'
+      },
+      {
+        path: 'quick-start',
+        name: 'DocsQuickStart',
+        component: () => import('@/views/docs/QuickStart.vue')
+      },
+      {
+        path: 'architecture',
+        name: 'DocsArchitecture',
+        component: () => import('@/views/docs/Architecture.vue')
+      },
+      {
+        path: 'deployment',
+        name: 'DocsDeployment',
+        component: () => import('@/views/docs/Deployment.vue')
+      },
+      {
+        path: 'conventions',
+        name: 'DocsConventions',
+        component: () => import('@/views/docs/Conventions.vue')
+      },
+      {
+        path: 'api',
+        name: 'DocsApi',
+        component: () => import('@/views/docs/ApiReference.vue')
+      }
+    ]
+  },
+
   // ──────── 公共页面（GuestLayout） ────────
   {
     path: '/',

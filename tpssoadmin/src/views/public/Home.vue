@@ -7,6 +7,7 @@
           <span class="navbar-title">TPSSO</span>
         </router-link>
         <div class="navbar-right">
+          <router-link to="/docs" class="nav-link">文档</router-link>
           <template v-if="userStore.isAuthenticated">
             <span class="nav-user">{{ userStore.userInfo?.nickName }}</span>
             <router-link :to="userStore.isAdmin ? '/admin/dashboard' : '/dashboard'" class="nav-link">进入控制台</router-link>
