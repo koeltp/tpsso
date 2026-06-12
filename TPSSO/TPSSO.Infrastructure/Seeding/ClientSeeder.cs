@@ -86,6 +86,15 @@ public class ClientSeeder
             });
         }
 
+        if (await _roleManager.FindByNameAsync(RoleConstants.User) is null)
+        {
+            await _roleManager.CreateAsync(new Role
+            {
+                Name = RoleConstants.User,
+                Description = "普通用户"
+            });
+        }
+
         // ──────── 管理员用户 ────────
 
         const string adminEmail = "admin@taipi.top";
@@ -119,7 +128,7 @@ public class ClientSeeder
 
         if (await _userManager.FindByEmailAsync(testEmail) is null)
         {
-            var user = new User { UserName = testEmail, Email = testEmail };
+            var user = new User { UserName = testEmail, Email = testEmail, NickName = "测试用户" };
             var result = await _userManager.CreateAsync(user, testPassword);
             if (result.Succeeded)
             {
@@ -129,6 +138,13 @@ public class ClientSeeder
             {
                 Console.WriteLine($"创建测试用户失败: {string.Join(", ", result.Errors)}");
             }
+        }
+
+        // 确保测试用户拥有 User 角色
+        var testUser = await _userManager.FindByEmailAsync(testEmail);
+        if (testUser is not null && !await _userManager.IsInRoleAsync(testUser, RoleConstants.User))
+        {
+            await _userManager.AddToRoleAsync(testUser, RoleConstants.User);
         }
 
         // ──────── OAuth 客户端 ────────
@@ -185,6 +201,55 @@ public class ClientSeeder
                 await _context.SaveChangesAsync();
             }
         }
+
+        // 用户门户（tpssoportal）
+        if (await _manager.FindByClientIdAsync(SystemClientIds.PortalClient) == null)
+        {
+            var openIddictApp = await _manager.CreateAsync(new OpenIddictApplicationDescriptor
+            {
+                ClientId = SystemClientIds.PortalClient,
+                ConsentType = ConsentTypes.Implicit,
+                DisplayName = "TPSSO 用户门户",
+                RedirectUris = { new Uri("http://localhost:3011/callback") },
+                PostLogoutRedirectUris = { new Uri("http://localhost:3011") },
+                Permissions =
+                {
+                    Permissions.Endpoints.Authorization,
+                    Permissions.Endpoints.Token,
+                    Permissions.Endpoints.EndSession,
+                    Permissions.ResponseTypes.Code,
+                    Permissions.GrantTypes.AuthorizationCode,
+                    Permissions.Scopes.Email,
+                    Permissions.Scopes.Profile,
+                    Permissions.Scopes.Roles
+                }
+            });
+
+            var openIddictId = (string?)openIddictApp.GetType().GetProperty("Id")?.GetValue(openIddictApp);
+            if (!await _context.ClientApplications.AnyAsync(c => c.ClientId == SystemClientIds.PortalClient))
+            {
+                var creator = await _userManager.FindByEmailAsync(adminEmail);
+                _context.ClientApplications.Add(new ClientApplication
+                {
+                    ClientId = SystemClientIds.PortalClient,
+                    OpenIddictApplicationId = openIddictId,
+                    Name = "TPSSO 用户门户",
+                    Description = "TPSSO 用户自助服务门户",
+                    IsPublic = true,
+                    Status = ClientStatus.Approved,
+                    CreatedByUserId = creator?.Id ?? Guid.Empty,
+                    ReviewedByUserId = creator?.Id ?? Guid.Empty,
+                    ReviewedAt = DateTime.UtcNow,
+                    RedirectUris = [new ClientRedirectUri { Uri = "http://localhost:3011/callback" }],
+                    AllowedScopes = [
+                        new ClientScope { Scope = "email" },
+                        new ClientScope { Scope = "profile" },
+                        new ClientScope { Scope = "roles" }
+                    ]
+                });
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 
     // ──────── 字典配置种子数据 ────────
@@ -205,8 +270,12 @@ public class ClientSeeder
         {
             Code = "System", Name = "系统配置", Description = "系统全局配置", Sort = 3,
         };
+        var smtpType = new DictType
+        {
+            Code = "Smtp", Name = "邮件配置", Description = "SMTP 邮件发送配置", Sort = 4,
+        };
 
-        _context.DictTypes.AddRange(oauthType, securityType, systemType);
+        _context.DictTypes.AddRange(oauthType, securityType, systemType, smtpType);
         await _context.SaveChangesAsync();
 
         // 子分类和配置项
@@ -286,6 +355,22 @@ public class ClientSeeder
                 [
                     new DictItem { Key = "SiteName", Value = "TPSSO", Description = "站点名称", Sort = 1 },
                     new DictItem { Key = "AllowRegistration", Value = "true", Description = "是否允许注册", Sort = 2 },
+                    new DictItem { Key = "VerificationCodeExpireMinutes", Value = "5", Description = "验证码有效期（分钟）", Sort = 3 },
+                ]
+            },
+            new()
+            {
+                Code = "SmtpServer", Name = "SMTP 配置", Description = "邮件发送服务器配置", Sort = 1,
+                ParentId = smtpType.Id,
+                Items =
+                [
+                    new DictItem { Key = "Host", Value = "smtp.qiye.aliyun.com", Description = "SMTP 服务器地址", Sort = 1 },
+                    new DictItem { Key = "Port", Value = "587", Description = "SMTP 端口", Sort = 2 },
+                    new DictItem { Key = "UseSsl", Value = "true", Description = "是否使用 SSL", Sort = 3 },
+                    new DictItem { Key = "Username", Value = "tp@taipi.top", Description = "SMTP 用户名", Sort = 4 },
+                    new DictItem { Key = "Password", Value = "", Description = "SMTP 密码", IsSensitive = true, Sort = 5 },
+                    new DictItem { Key = "SenderName", Value = "TPSSO", Description = "发件人名称", Sort = 6 },
+                    new DictItem { Key = "SenderEmail", Value = "tp@taipi.top", Description = "发件人邮箱", Sort = 7 },
                 ]
             },
         };

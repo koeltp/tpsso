@@ -199,7 +199,7 @@ public class UserService : IUserService
         return ResponseResult<bool>.Success("已启用");
     }
 
-    public async Task<ResponseResult<bool>> ResetPasswordAsync(Guid id, ResetPasswordModel model)
+    public async Task<ResponseResult<bool>> ResetPasswordAsync(Guid id, AdminResetPasswordModel model)
     {
         var user = await _userManager.FindByIdAsync(id.ToString());
         if (user == null)

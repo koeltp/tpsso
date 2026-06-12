@@ -1,8 +1,8 @@
 services:
   # ==================== Auth 认证服务 ====================
-  tpssoauth-api:
-    image: registry.cn-shenzhen.aliyuncs.com/tmd/sso:tpssoauth-api
-    container_name: tpssoauth-api
+  authapi:
+    image: registry.cn-shenzhen.aliyuncs.com/tmd/sso:authapi
+    container_name: authapi
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
@@ -10,14 +10,18 @@ services:
     ports:
       - "7086:80"
     volumes:
-      - ./config/tpssoauth-api/appsettings.Production.json:/app/appsettings.Production.json:ro
+      - ./config/certbot/encryption.pfx:/app/certbot/encryption.pfx
+      - ./config/certbot/signing.pfx:/app/certbot/signing.pfx
+      - ./config/authapi/appsettings.Production.json:/app/appsettings.Production.json:ro
     networks:
-      - tpsso-network
+      - app
+      - saas
+      - infrastructure
 
   # ==================== Admin 管理服务 ====================
-  tpssoadmin-api:
-    image: registry.cn-shenzhen.aliyuncs.com/tmd/sso:tpssoadmin-api
-    container_name: tpssoadmin-api
+  adminapi:
+    image: registry.cn-shenzhen.aliyuncs.com/tmd/sso:adminapi
+    container_name: adminapi
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: Production
@@ -26,36 +30,52 @@ services:
       - "7089:80"
     volumes:
       - admin_uploads:/app/wwwroot/avatars
-      - ./config/tpssoadmin-api/appsettings.Production.json:/app/appsettings.Production.json:ro
+      - ./config/adminapi/appsettings.Production.json:/app/appsettings.Production.json:ro
     depends_on:
-      - tpssoauth-api
+      - authapi
     networks:
-      - tpsso-network
+      - app
+      - saas
+      - infrastructure
 
   # ==================== 认证前端（tpssoauth）====================
-  tpssoauth:
-    image: registry.cn-shenzhen.aliyuncs.com/tmd/sso:tpssoauth
-    container_name: tpssoauth
+  authweb:
+    image: registry.cn-shenzhen.aliyuncs.com/tmd/sso:authweb
+    container_name: authweb
     restart: unless-stopped
     ports:
       - "7087:80"
     depends_on:
-      - tpssoauth-api
+      - authapi
     networks:
-      - tpsso-network
+      - app
+      - saas
+      - infrastructure
 
   # ==================== 管理后台前端（tpssoadmin）====================
-  tpssoadmin:
-    image: registry.cn-shenzhen.aliyuncs.com/tmd/sso:tpssoadmin
-    container_name: tpssoadmin
+  adminweb:
+    image: registry.cn-shenzhen.aliyuncs.com/tmd/sso:adminweb
+    container_name: adminweb
     restart: unless-stopped
     ports:
       - "7088:80"
     depends_on:
-      - tpssoadmin-api
+      - adminapi
     networks:
-      - tpsso-network
-
+      - app
+      - saas
+      - infrastructure
+  cloudflared_sso:
+    container_name: cloudflared_sso
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TOKEN_SSO}
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARED_TOKEN_SSO}
+    restart: unless-stopped
+    networks:
+      - infrastructure
+      - saas
+      - app
 # ==================== 数据卷 ====================
 volumes:
   admin_uploads:
@@ -63,4 +83,9 @@ volumes:
 
 # ==================== 网络 ====================
 networks:
-  tpsso-network:
+  infrastructure:
+    external: true
+  saas:
+    external: true
+  app:
+    external: true

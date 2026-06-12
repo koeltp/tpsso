@@ -19,26 +19,26 @@ namespace TPSSO.Auth.Controllers;
 public class AuthorizationController : ControllerBase
 {
     private readonly IOpenIddictApplicationManager _applicationManager;
-    private readonly IOpenIddictAuthorizationManager _authorizationManager;
+    private readonly ILogger<AuthorizationController> _logger;
     private readonly IOpenIddictScopeManager _scopeManager;
     private readonly SignInManager<User> _signInManager;
     private readonly UserManager<User> _userManager;
     private readonly SsoOptions _ssoOptions;
 
     public AuthorizationController(
+        ILogger<AuthorizationController> logger,
         IOpenIddictApplicationManager applicationManager,
-        IOpenIddictAuthorizationManager authorizationManager,
         IOpenIddictScopeManager scopeManager,
         SignInManager<User> signInManager,
         UserManager<User> userManager,
         IOptions<SsoOptions> ssoOptions)
     {
         _applicationManager = applicationManager;
-        _authorizationManager = authorizationManager;
         _scopeManager = scopeManager;
         _signInManager = signInManager;
         _userManager = userManager;
         _ssoOptions = ssoOptions.Value;
+        _logger = logger;
     }
 
     /// <summary>
@@ -50,22 +50,33 @@ public class AuthorizationController : ControllerBase
         var request = HttpContext.GetOpenIddictServerRequest() ??
                       throw new InvalidOperationException("无法获取 OpenID Connect 请求。");
 
+        _logger.LogInformation("收到授权请求。");
+
         // 未登录则重定向到前端登录页
         if (!User.Identity?.IsAuthenticated == true)
             return RedirectToLoginPage();
 
+        _logger.LogInformation("用户已登录，开始处理授权请求。");
+
+        // 查找客户端应用
+        _logger.LogInformation("尝试查找客户端应用。");
         var application = await _applicationManager.FindByClientIdAsync(request.ClientId);
         if (application == null)
             throw new InvalidOperationException("客户端应用不存在。");
+        _logger.LogInformation("客户端应用已找到。");
 
+        // 查找用户
+        _logger.LogInformation("尝试查找用户。");
         var user = await _userManager.GetUserAsync(User);
         if (user == null)
         {
             await _signInManager.SignOutAsync();
             return RedirectToLoginPage();
         }
+        _logger.LogInformation("用户已找到。");
 
         var appName = (await _applicationManager.GetDisplayNameAsync(application)) ?? request.ClientId;
+        _logger.LogInformation($"客户端应用显示名称：{appName}。");
 
         // 重定向到前端授权确认页面
         var consentUrl = $"{_ssoOptions.LoginBaseUrl}{_ssoOptions.ConsentPath}" +
@@ -77,6 +88,7 @@ public class AuthorizationController : ControllerBase
             $"&code_challenge={Uri.EscapeDataString(request.CodeChallenge ?? "")}" +
             $"&code_challenge_method={Uri.EscapeDataString(request.CodeChallengeMethod ?? "")}" +
             $"&app_name={Uri.EscapeDataString(appName)}";
+        _logger.LogInformation($"重定向到授权确认页面：{consentUrl}。");
         return Redirect(consentUrl);
     }
 
@@ -86,22 +98,36 @@ public class AuthorizationController : ControllerBase
     [HttpPost("authorize")]
     public async Task<IActionResult> AuthorizeConfirm()
     {
+        _logger.LogInformation("收到授权确认请求。");
+
         var request = HttpContext.GetOpenIddictServerRequest() ??
                       throw new InvalidOperationException("无法获取 OpenID Connect 请求。");
 
+        _logger.LogInformation("用户已登录，开始处理授权确认请求。");
+
+        // 查找客户端应用
+        _logger.LogInformation("尝试查找客户端应用。");
         if (!User.Identity?.IsAuthenticated == true)
             return RedirectToLoginPage();
 
+        _logger.LogInformation("用户已登录，开始处理授权确认请求。");
+
+        // 查找用户
+        _logger.LogInformation("尝试查找用户。");
         var application = await _applicationManager.FindByClientIdAsync(request.ClientId);
         if (application == null)
             throw new InvalidOperationException("客户端应用不存在。");
+        _logger.LogInformation("客户端应用已找到。");
 
+        // 查找用户
+        _logger.LogInformation("尝试查找用户。");
         var user = await _userManager.GetUserAsync(User);
         if (user == null)
         {
             await _signInManager.SignOutAsync();
             return RedirectToLoginPage();
         }
+        _logger.LogInformation("用户已找到。");
 
         var identity = new ClaimsIdentity(
             authenticationType: TokenValidationParameters.DefaultAuthenticationType,
@@ -125,6 +151,8 @@ public class AuthorizationController : ControllerBase
                 .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
         }
 
+        // 查找用户角色
+        _logger.LogInformation("尝试查找用户角色。");
         var roles = await _userManager.GetRolesAsync(user);
         foreach (var role in roles)
         {
@@ -139,7 +167,6 @@ public class AuthorizationController : ControllerBase
             new ClaimsPrincipal(identity),
             new AuthenticationProperties(),
             OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-
         return SignIn(ticket.Principal, ticket.Properties, ticket.AuthenticationScheme);
     }
 
@@ -168,6 +195,7 @@ public class AuthorizationController : ControllerBase
     {
         try
         {
+            _logger.LogInformation("收到用授权码换 Token 请求。");
             var request = HttpContext.GetOpenIddictServerRequest();
             if (request == null)
                 return BadRequest(new { error = "invalid_request", error_description = "无法获取 OpenID Connect 请求。" });
@@ -177,6 +205,7 @@ public class AuthorizationController : ControllerBase
                 var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
                 if (result?.Principal == null)
                 {
+                    _logger.LogInformation("授权码无效或已过期。");
                     return Forbid(authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                                   properties: new AuthenticationProperties(new Dictionary<string, string?>
                                   {
@@ -185,10 +214,13 @@ public class AuthorizationController : ControllerBase
                                   }));
                 }
 
+                _logger.LogInformation("授权码有效，用户已找到。");
+
                 var userId = result.Principal.FindFirst(Claims.Subject)?.Value;
                 var user = await _userManager.FindByIdAsync(userId!);
                 if (user == null)
                 {
+                    _logger.LogInformation("关联用户不存在。");
                     return Forbid(authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                                   properties: new AuthenticationProperties(new Dictionary<string, string?>
                                   {
@@ -197,22 +229,31 @@ public class AuthorizationController : ControllerBase
                                   }));
                 }
 
+                _logger.LogInformation("关联用户存在。");
+
                 // 重新创建 principal，确保包含最新的声明
                 var identity = new ClaimsIdentity(
                     result.Principal.Identities.First().Claims,
                     authenticationType: TokenValidationParameters.DefaultAuthenticationType);
+                _logger.LogInformation("用户已登录，授权码：{result.Properties.Code}。");
 
+                // 重新创建 principal，确保包含最新的声明
                 var newPrincipal = new ClaimsPrincipal(identity);
                 newPrincipal.SetScopes(request.GetScopes());
                 newPrincipal.SetResources(await _scopeManager.ListResourcesAsync(request.GetScopes()).ToListAsync());
+                _logger.LogInformation("用户已登录，授权码：{result.Properties.Code}，资源：{string.Join(',', request.GetScopes())}。");
+
+
 
                 return SignIn(newPrincipal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
             }
 
+            _logger.LogInformation("不支持的授权类型。");
             return BadRequest(new { error = "unsupported_grant_type", error_description = "不支持的授权类型。" });
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "用授权码换 Token 失败。");
             return BadRequest(new { error = "server_error", error_description = ex.Message });
         }
     }
@@ -227,6 +268,7 @@ public class AuthorizationController : ControllerBase
         var returnUrl = $"{Request.Scheme}://{Request.Host}/connect/authorize{HttpContext.Request.QueryString}";
         var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
         var loginUrl = $"{_ssoOptions.LoginBaseUrl}{_ssoOptions.LoginPath}?returnUrl={encodedReturnUrl}";
+        _logger.LogInformation("重定向到登录页，returnUrl：{returnUrl}。", returnUrl);
         return Redirect(loginUrl);
     }
 }

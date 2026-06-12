@@ -45,7 +45,7 @@
         <div class="menu-list">
           <div
             v-for="item in menuItems"
-            :key="item.path"
+            :key="item.name"
             :class="['menu-item', { active: activeMenu === item.path }]"
             @click="router.push(item.path)"
           >
@@ -70,7 +70,7 @@
 <script setup lang="ts">
 import { ref, computed, markRaw, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { DataBoard, Monitor, ArrowDown, SwitchButton, User, Fold, Expand, UserFilled, Setting } from '@element-plus/icons-vue'
+import { DataBoard, ArrowDown, SwitchButton, User, Fold, Expand, UserFilled, Setting, Grid } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { useClientStore } from '@/stores/client'
 import logoSrc from '@/assets/logo-icon.png'
@@ -82,17 +82,21 @@ const clientStore = useClientStore()
 const isCollapsed = ref(false)
 
 const activeMenu = computed(() => {
-  if (route.path.startsWith('/clients')) return '/clients'
-  if (route.path.startsWith('/users')) return '/users'
+  if (route.path.startsWith('/admin/clients')) return '/admin/clients'
+  if (route.path.startsWith('/admin/users')) return '/admin/users'
+  if (route.path.startsWith('/admin/dict')) return '/admin/dict'
   return route.path
 })
 
-const menuItems = [
-  { name: '仪表盘', path: '/', icon: markRaw(DataBoard) },
-  { name: '客户端管理', path: '/clients', icon: markRaw(Monitor), badge: () => clientStore.pendingCount },
-  { name: '用户管理', path: '/users', icon: markRaw(UserFilled) },
-  { name: '配置管理', path: '/dict', icon: markRaw(Setting) }
-]
+// 管理员菜单（此布局仅 Admin 使用）
+const menuItems = computed(() => {
+  return [
+    { name: '仪表盘', path: '/admin/dashboard', icon: markRaw(DataBoard) },
+    { name: '客户端管理', path: '/admin/clients', icon: markRaw(Grid), badge: () => clientStore.pendingCount },
+    { name: '用户管理', path: '/admin/users', icon: markRaw(UserFilled) },
+    { name: '配置管理', path: '/admin/dict', icon: markRaw(Setting) }
+  ]
+})
 
 const toggleCollapse = () => {
   isCollapsed.value = !isCollapsed.value
@@ -102,7 +106,10 @@ onMounted(async () => {
   if (!userStore.userInfo) {
     await userStore.fetchUserInfo()
   }
-  clientStore.fetchPendingCount()
+  // Admin 用户加载待审核数量
+  if (userStore.isAdmin) {
+    clientStore.fetchPendingCount()
+  }
 })
 
 const doLogout = () => {

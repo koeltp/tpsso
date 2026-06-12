@@ -8,6 +8,8 @@ using TPSSO.Infrastructure.Data;
 using TPSSO.Infrastructure.Seeding;
 using TPSSO.Infrastructure.Services;
 using System.Security.Cryptography.X509Certificates;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +27,14 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseOpenIddict();
 });
 
+// Redis 缓存
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+});
+builder.Services.AddHttpsRedirection(x=>{
+    x.HttpsPort=443;
+});
 // 2. Identity 配置（Cookie 认证）
 builder.Services.AddIdentity<User, Role>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
@@ -42,6 +52,10 @@ builder.Services.Configure<IdentityOptions>(options =>
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/login";
+    // options.Cookie.Domain = ".taipi.top";
+    options.Cookie.SameSite=SameSiteMode.Lax;
+    options.Cookie.SecurePolicy=CookieSecurePolicy.Always;
+
 });
 
 // 3. OpenIddict 完整配置（Server + Core + Validation）
@@ -54,6 +68,9 @@ builder.Services.AddOpenIddict()
     })
     .AddServer(options =>
     {
+        // Issuer 从 SsoOptions.LoginBaseUrl 读取，生产环境通过 appsettings.Production.json 配置
+        var ssoOptions = builder.Configuration.GetSection(SsoOptions.SectionName).Get<SsoOptions>()!;
+        options.SetIssuer(ssoOptions.Issuer);
         options.SetAuthorizationEndpointUris("/connect/authorize")
                .SetTokenEndpointUris("/connect/token")
                .SetUserInfoEndpointUris("/connect/userinfo")
@@ -113,10 +130,22 @@ builder.Services.AddOpenApi();
 
 // 注册服务
 builder.Services.AddScoped<IAccountService, AccountService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IVerificationCodeService, VerificationCodeService>();
+builder.Services.AddScoped<IConfigService, ConfigService>();
 builder.Services.AddScoped<ClientSeeder>();
 
 var app = builder.Build();
-
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    KnownNetworks =
+    {
+        new IPNetwork(System.Net.IPAddress.Parse("172.16.0.0"), 12),
+        new IPNetwork(System.Net.IPAddress.Parse("192.168.0.0"), 16),
+        new IPNetwork(System.Net.IPAddress.Parse("127.0.0.0"), 8)
+    }
+});
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

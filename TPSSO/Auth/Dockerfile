@@ -1,8 +1,8 @@
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
 WORKDIR /app
 
 # 创建非 root 用户
-RUN adduser --disabled-password --gecos "" appuser
+RUN useradd -m -s /bin/bash appuser
 
 # 安装 curl（健康检查用）
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*

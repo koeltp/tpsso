@@ -20,6 +20,11 @@
       </el-button>
     </el-form-item>
   </el-form>
+  <div class="bottom-link">
+    还没有账号？ <router-link to="/register">立即注册</router-link>
+    <span class="divider">|</span>
+    <router-link to="/forgot-password">忘记密码</router-link>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -65,8 +70,12 @@ const handleSubmit = async () => {
     // 如果 returnUrl 指向 OAuth 授权端点，直接跳转
     if (returnUrl.value.startsWith('/connect/') || returnUrl.value.startsWith('http')) {
       window.location.href = returnUrl.value
-    } else {
+    } else if (returnUrl.value && returnUrl.value !== '/') {
       router.push(returnUrl.value)
+    } else {
+      // 无回调地址时跳转管理后台（走 /dashboard 触发 OAuth 流程）
+      const adminUrl = import.meta.env.VITE_ADMIN_URL || 'http://localhost:3009'
+      window.location.href = adminUrl + '/dashboard'
     }
   } catch {
     // 拦截器已处理
@@ -94,5 +103,25 @@ const handleSubmit = async () => {
   color: #333;
   font-size: 24px;
   font-weight: 600;
+}
+
+.bottom-link {
+  text-align: center;
+  margin-top: 20px;
+  color: #666;
+}
+
+.bottom-link a {
+  color: #409eff;
+  text-decoration: none;
+}
+
+.bottom-link a:hover {
+  text-decoration: underline;
+}
+
+.divider {
+  margin: 0 8px;
+  color: #ccc;
 }
 </style>

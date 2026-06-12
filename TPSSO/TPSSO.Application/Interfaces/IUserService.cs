@@ -41,5 +41,5 @@ public interface IUserService
     /// <summary>
     /// 管理员重置用户密码
     /// </summary>
-    Task<ResponseResult<bool>> ResetPasswordAsync(Guid id, ResetPasswordModel model);
+    Task<ResponseResult<bool>> ResetPasswordAsync(Guid id, AdminResetPasswordModel model);
 }

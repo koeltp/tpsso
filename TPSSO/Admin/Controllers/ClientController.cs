@@ -129,6 +129,17 @@ public class ClientController : ControllerBase
     }
 
     /// <summary>
+    /// 重置客户端密钥（仅机密类型）
+    /// </summary>
+    [HttpPost("{id}/regenerate-secret")]
+    [Authorize]
+    public async Task<ResponseResult<ClientCreatedResult>> RegenerateSecret(Guid id)
+    {
+        var userId = GetUserId();
+        return await _clientService.RegenerateSecretAsync(id, userId);
+    }
+
+    /// <summary>
     /// 从 Claims 中读取当前用户 ID
     /// </summary>
     private Guid GetUserId()

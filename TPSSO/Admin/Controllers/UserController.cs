@@ -79,7 +79,7 @@ public class UserController : ControllerBase
     /// 管理员重置用户密码
     /// </summary>
     [HttpPost("{id}/reset-password")]
-    public async Task<ResponseResult<bool>> ResetPassword(Guid id, [FromBody] ResetPasswordModel model)
+    public async Task<ResponseResult<bool>> ResetPassword(Guid id, [FromBody] AdminResetPasswordModel model)
     {
         return await _userService.ResetPasswordAsync(id, model);
     }

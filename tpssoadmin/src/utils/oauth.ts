@@ -10,6 +10,8 @@ const CLIENT_ID = import.meta.env.VITE_OAUTH_CLIENT_ID || 'tpsso_admin_client'
 const SCOPES = import.meta.env.VITE_OAUTH_SCOPE || 'openid profile email roles'
 const CODE_VERIFIER_KEY = 'admin_code_verifier'
 const REDIRECT_KEY = 'admin_redirect'
+// 在文件顶部添加
+const VITE_SSO_URL = import.meta.env.VITE_SSO_URL || 'https://auth.taipi.top'
 
 /** 生成随机字符串 */
 function randomString(length: number): string {
@@ -51,7 +53,7 @@ export async function startOAuthLogin(redirectPath?: string): Promise<void> {
     code_challenge_method: 'S256'
   })
 
-  window.location.href = `/connect/authorize?${params.toString()}`
+  window.location.href = `${VITE_SSO_URL}/connect/authorize?${params.toString()}`
 }
 
 /** 用授权码换 token，返回 Token 数据（不直接写 localStorage） */
@@ -69,7 +71,7 @@ export async function exchangeCodeForToken(code: string): Promise<{ accessToken:
     code_verifier: verifier
   })
 
-  const response = await fetch('/connect/token', {
+  const response = await fetch(`${VITE_SSO_URL}/connect/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: params.toString()
@@ -97,7 +99,7 @@ export async function refreshAccessToken(currentRefreshToken: string): Promise<{
     client_id: CLIENT_ID
   })
 
-  const response = await fetch('/connect/token', {
+  const response = await fetch(`${VITE_SSO_URL}/connect/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: params.toString()
@@ -116,7 +118,7 @@ export async function refreshAccessToken(currentRefreshToken: string): Promise<{
 
 /** 跳转到 SSO 登出页面 */
 export function logoutOAuth(): void {
-  window.location.href = '/connect/logout?post_logout_redirect_uri=' + encodeURIComponent(window.location.origin)
+  window.location.href = `${VITE_SSO_URL}/connect/logout?post_logout_redirect_uri=${encodeURIComponent(window.location.origin)}`
 }
 
 /** 获取登录前保存的跳转路径 */
