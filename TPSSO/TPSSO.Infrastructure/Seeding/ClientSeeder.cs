@@ -270,8 +270,12 @@ public class ClientSeeder
         {
             Code = "System", Name = "系统配置", Description = "系统全局配置", Sort = 3,
         };
+        var smtpType = new DictType
+        {
+            Code = "Smtp", Name = "邮件配置", Description = "SMTP 邮件发送配置", Sort = 4,
+        };
 
-        _context.DictTypes.AddRange(oauthType, securityType, systemType);
+        _context.DictTypes.AddRange(oauthType, securityType, systemType, smtpType);
         await _context.SaveChangesAsync();
 
         // 子分类和配置项
@@ -351,6 +355,22 @@ public class ClientSeeder
                 [
                     new DictItem { Key = "SiteName", Value = "TPSSO", Description = "站点名称", Sort = 1 },
                     new DictItem { Key = "AllowRegistration", Value = "true", Description = "是否允许注册", Sort = 2 },
+                    new DictItem { Key = "VerificationCodeExpireMinutes", Value = "5", Description = "验证码有效期（分钟）", Sort = 3 },
+                ]
+            },
+            new()
+            {
+                Code = "SmtpServer", Name = "SMTP 配置", Description = "邮件发送服务器配置", Sort = 1,
+                ParentId = smtpType.Id,
+                Items =
+                [
+                    new DictItem { Key = "Host", Value = "smtp.qiye.aliyun.com", Description = "SMTP 服务器地址", Sort = 1 },
+                    new DictItem { Key = "Port", Value = "587", Description = "SMTP 端口", Sort = 2 },
+                    new DictItem { Key = "UseSsl", Value = "true", Description = "是否使用 SSL", Sort = 3 },
+                    new DictItem { Key = "Username", Value = "tp@taipi.top", Description = "SMTP 用户名", Sort = 4 },
+                    new DictItem { Key = "Password", Value = "", Description = "SMTP 密码", IsSensitive = true, Sort = 5 },
+                    new DictItem { Key = "SenderName", Value = "TPSSO", Description = "发件人名称", Sort = 6 },
+                    new DictItem { Key = "SenderEmail", Value = "tp@taipi.top", Description = "发件人邮箱", Sort = 7 },
                 ]
             },
         };

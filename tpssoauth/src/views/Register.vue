@@ -1,20 +1,14 @@
 <template>
-  <router-link to="/" class="home-icon" title="返回首页">
-    <el-icon><HomeFilled /></el-icon>
-  </router-link>
   <div class="logo-area">
-    <img :src="logoSrc" alt="TPSSO" />
+    <img :src="logoSrc" alt="TPSSO" class="logo-img" />
   </div>
-  <h1 class="title">TPSSO 注册</h1>
+  <h1 class="title">注册</h1>
 
   <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
-    <el-form-item prop="username">
-      <el-input v-model="form.username" placeholder="用户名" size="large" :prefix-icon="User" />
-    </el-form-item>
     <el-form-item prop="email">
       <el-input v-model="form.email" placeholder="邮箱" size="large" :prefix-icon="Message">
         <template #append>
-          <el-button @click="sendCode" :disabled="countdown > 0">
+          <el-button @click="handleSendCode" :disabled="countdown > 0" :loading="sendingCode">
             {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
           </el-button>
         </template>
@@ -36,27 +30,27 @@
     </el-form-item>
   </el-form>
 
-  <div class="login-link">
-    已有账号？ <router-link :to="{ path: '/login', query: $route.query.redirect ? { redirect: $route.query.redirect as string } : {} }">立即登录</router-link>
+  <div class="bottom-link">
+    已有账号？ <router-link to="/login">立即登录</router-link>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
-import { User, Message, Key, Lock, HomeFilled } from '@element-plus/icons-vue'
-import logoSrc from '@/assets/logo-icon.png'
+import { Message, Key, Lock } from '@element-plus/icons-vue'
+import { sendCode, register } from '@/api/auth'
+import logoSrc from '@/assets/logo.png'
 
 const router = useRouter()
-const route = useRoute()
 
 const formRef = ref<FormInstance>()
 const loading = ref(false)
+const sendingCode = ref(false)
 const countdown = ref(0)
 
 const form = reactive({
-  username: '',
   email: '',
   code: '',
   password: '',
@@ -72,10 +66,6 @@ const validateConfirmPassword = (_rule: any, value: string, callback: any) => {
 }
 
 const rules: FormRules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '用户名长度在 3 到 20 个字符', trigger: 'blur' }
-  ],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
@@ -91,96 +81,90 @@ const rules: FormRules = {
   ]
 }
 
-/** 发送验证码（后端接口待实现） */
-const sendCode = async () => {
+/** 发送验证码 */
+const handleSendCode = async () => {
   if (!form.email) {
     ElMessage.warning('请输入邮箱')
     return
   }
-  // TODO: 调用后端发送验证码接口
-  ElMessage.info('验证码功能待后端实现')
-  countdown.value = 60
-  const timer = setInterval(() => {
-    countdown.value--
-    if (countdown.value <= 0) clearInterval(timer)
-  }, 1000)
+  const emailReg = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailReg.test(form.email)) {
+    ElMessage.warning('请输入正确的邮箱格式')
+    return
+  }
+
+  sendingCode.value = true
+  try {
+    await sendCode({ email: form.email })
+    ElMessage.success('验证码已发送')
+    countdown.value = 60
+    const timer = setInterval(() => {
+      countdown.value--
+      if (countdown.value <= 0) clearInterval(timer)
+    }, 1000)
+  } catch {
+    // 拦截器已处理
+  } finally {
+    sendingCode.value = false
+  }
 }
 
-/** 注册（后端接口待实现） */
+/** 注册 */
 const handleRegister = async () => {
   if (!formRef.value) return
-  await formRef.value.validate(async (valid) => {
-    if (!valid) return
-    loading.value = true
-    try {
-      // TODO: 调用后端注册接口
-      ElMessage.info('注册功能待后端实现')
-      const redirect = route.query.redirect as string
-      if (redirect) {
-        router.push({ path: '/login', query: { redirect } })
-      } else {
-        router.push('/login')
-      }
-    } catch {
-      // 拦截器已处理
-    } finally {
-      loading.value = false
-    }
-  })
+  const valid = await formRef.value.validate().catch(() => false)
+  if (!valid) return
+
+  loading.value = true
+  try {
+    await register({
+      email: form.email,
+      code: form.code,
+      password: form.password,
+      confirmPassword: form.confirmPassword
+    })
+    ElMessage.success('注册成功，请登录')
+    router.push('/login')
+  } catch {
+    // 拦截器已处理
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
 <style scoped>
-.home-icon {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  color: #999;
-  text-decoration: none;
-  border-radius: 8px;
-  transition: all 0.3s;
-  z-index: 1;
-}
-
-.home-icon:hover {
-  color: #409eff;
-  background: #f0f5ff;
-}
-
 .logo-area {
   text-align: center;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
-.logo-area img {
-  height: 56px;
+.logo-area .logo-img {
+  max-width: 100%;
+  height: auto;
+  max-height: 64px;
 }
 
 .title {
   text-align: center;
   margin-bottom: 30px;
   color: #333;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 600;
 }
 
-.login-link {
+.bottom-link {
   text-align: center;
   margin-top: 20px;
   color: #666;
 }
 
-.login-link a {
+.bottom-link a {
   color: #409eff;
   text-decoration: none;
 }
 
-.login-link a:hover {
+.bottom-link a:hover {
   text-decoration: underline;
 }
 </style>

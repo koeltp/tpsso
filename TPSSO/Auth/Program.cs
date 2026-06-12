@@ -25,6 +25,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseOpenIddict();
 });
 
+// Redis 缓存
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+});
+
 // 2. Identity 配置（Cookie 认证）
 builder.Services.AddIdentity<User, Role>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
@@ -113,6 +119,9 @@ builder.Services.AddOpenApi();
 
 // 注册服务
 builder.Services.AddScoped<IAccountService, AccountService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IVerificationCodeService, VerificationCodeService>();
+builder.Services.AddScoped<IConfigService, ConfigService>();
 builder.Services.AddScoped<ClientSeeder>();
 
 var app = builder.Build();

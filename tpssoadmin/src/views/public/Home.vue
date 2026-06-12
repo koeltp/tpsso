@@ -14,7 +14,7 @@
           </template>
           <template v-else>
             <a class="nav-link" @click="handleLogin">登录</a>
-            <router-link to="/register" class="nav-link">注册</router-link>
+            <a class="nav-link" @click="handleRegister">注册</a>
           </template>
         </div>
       </div>
@@ -97,6 +97,11 @@ const userStore = useUserStore()
 
 const handleLogin = () => {
   startOAuthLogin()
+}
+
+const handleRegister = () => {
+  const ssoUrl = import.meta.env.VITE_SSO_URL || 'http://localhost:3010'
+  window.location.href = ssoUrl + '/register'
 }
 
 const handleLogout = () => {

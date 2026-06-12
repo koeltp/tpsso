@@ -44,4 +44,40 @@ public class AccountController : ControllerBase
     {
         return await _accountService.GetCurrentUserAsync(User);
     }
+
+    /// <summary>
+    /// 发送邮箱验证码
+    /// </summary>
+    [HttpPost("send-code")]
+    public async Task<ResponseResult<bool>> SendCode([FromBody] SendCodeModel model)
+    {
+        return await _accountService.SendCodeAsync(model.Email);
+    }
+
+    /// <summary>
+    /// 注册新用户
+    /// </summary>
+    [HttpPost("register")]
+    public async Task<ResponseResult<bool>> Register([FromBody] RegisterModel model)
+    {
+        return await _accountService.RegisterAsync(model);
+    }
+
+    /// <summary>
+    /// 发送重置密码验证码
+    /// </summary>
+    [HttpPost("send-reset-code")]
+    public async Task<ResponseResult<bool>> SendResetCode([FromBody] SendCodeModel model)
+    {
+        return await _accountService.SendResetCodeAsync(model.Email);
+    }
+
+    /// <summary>
+    /// 重置密码（忘记密码）
+    /// </summary>
+    [HttpPost("reset-password")]
+    public async Task<ResponseResult<bool>> ResetPassword([FromBody] ResetPasswordModel model)
+    {
+        return await _accountService.ResetPasswordAsync(model);
+    }
 }

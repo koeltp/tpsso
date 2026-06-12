@@ -17,6 +17,12 @@ builder.Services.Configure<UploadOptions>(builder.Configuration.GetSection(Uploa
 
 // 1. 数据库配置 - MySQL（与 Auth 共享同一数据库）
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// Redis 缓存
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+});
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), mysql =>
@@ -97,13 +103,20 @@ builder.Services.AddCors(options =>
 });
 
 // 5. 授权策略：只接受 OpenIddict 验证的 Bearer Token
-builder.Services.AddAuthorization(options =>
-{
-    options.DefaultPolicy = new AuthorizationPolicyBuilder()
-        .AddAuthenticationSchemes(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
-        .RequireAuthenticatedUser()
-        .Build();
-});
+// builder.Services.AddAuthorization(options =>
+// {
+//     options.DefaultPolicy = new AuthorizationPolicyBuilder()
+//         .AddAuthenticationSchemes(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
+//         .RequireAuthenticatedUser()
+//         .Build();
+// });
+
+
+builder.Services.AddAuthorizationBuilder()
+.SetDefaultPolicy(new AuthorizationPolicyBuilder()
+.AddAuthenticationSchemes(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)
+.RequireAuthenticatedUser()
+.Build());
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -113,6 +126,9 @@ builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IDictService, DictService>();
+builder.Services.AddScoped<IConfigService, ConfigService>();
+builder.Services.AddScoped<IVerificationCodeService, VerificationCodeService>();
+builder.Services.AddScoped<IEmailService,EmailService>();
 
 var app = builder.Build();
 

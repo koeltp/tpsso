@@ -36,7 +36,7 @@ public class UpdateUserRolesModel
 /// <summary>
 /// 管理员重置密码请求
 /// </summary>
-public class ResetPasswordModel
+public class AdminResetPasswordModel
 {
     /// <summary>新密码</summary>
     public string NewPassword { get; set; } = string.Empty;

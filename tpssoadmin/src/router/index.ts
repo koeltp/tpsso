@@ -18,12 +18,12 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'login',
         name: 'Login',
-        component: () => import('@/views/public/Login.vue')
-      },
-      {
-        path: 'register',
-        name: 'Register',
-        component: () => import('@/views/public/Register.vue')
+        redirect: () => {
+          // 跳转 SSO 登录页（外部地址，使用 window.location 实现整页跳转）
+          const ssoUrl = import.meta.env.VITE_SSO_URL || 'http://localhost:3010'
+          window.location.href = ssoUrl + '/login'
+          return '/login'
+        }
       },
       {
         path: 'callback',

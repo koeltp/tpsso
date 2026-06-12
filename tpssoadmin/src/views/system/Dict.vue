@@ -319,7 +319,7 @@ const handleAddItem = () => {
 const handleEditItem = (item: DictItemResult) => {
   itemForm.id = item.id
   itemForm.key = item.key
-  itemForm.value = ''
+  itemForm.value = item.isSensitive ? '••••••••' : item.value
   itemForm.description = item.description || ''
   itemForm.isSensitive = item.isSensitive
   itemForm.sort = item.sort
@@ -338,12 +338,15 @@ const confirmItem = async () => {
     return
   }
 
+  // 敏感项未修改值时，不提交 value 字段（后端保留原值）
+  const submitValue = (itemForm.isSensitive && itemForm.value === '••••••••') ? undefined : itemForm.value
+
   itemSaving.value = true
   try {
     await saveDictItem(selectedType.value.id, {
       id: itemForm.id || undefined,
       key: itemForm.key,
-      value: itemForm.value,
+      value: submitValue,
       description: itemForm.description || undefined,
       isSensitive: itemForm.isSensitive,
       sort: itemForm.sort,

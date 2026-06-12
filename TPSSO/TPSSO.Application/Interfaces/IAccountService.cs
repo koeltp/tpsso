@@ -38,4 +38,24 @@ public interface IAccountService
     /// 修改密码
     /// </summary>
     Task<ResponseResult<bool>> ChangePasswordAsync(ClaimsPrincipal principal, ChangePasswordModel model);
+
+    /// <summary>
+    /// 发送邮箱验证码
+    /// </summary>
+    Task<ResponseResult<bool>> SendCodeAsync(string email);
+
+    /// <summary>
+    /// 注册新用户
+    /// </summary>
+    Task<ResponseResult<bool>> RegisterAsync(RegisterModel model);
+
+    /// <summary>
+    /// 发送重置密码验证码
+    /// </summary>
+    Task<ResponseResult<bool>> SendResetCodeAsync(string email);
+
+    /// <summary>
+    /// 重置密码（忘记密码）
+    /// </summary>
+    Task<ResponseResult<bool>> ResetPasswordAsync(ResetPasswordModel model);
 }

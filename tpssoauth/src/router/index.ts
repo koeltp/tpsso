@@ -17,6 +17,18 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '登录' }
       },
       {
+        path: 'register',
+        name: 'Register',
+        component: () => import('@/views/Register.vue'),
+        meta: { title: '注册' }
+      },
+      {
+        path: 'forgot-password',
+        name: 'ForgotPassword',
+        component: () => import('@/views/ForgotPassword.vue'),
+        meta: { title: '忘记密码' }
+      },
+      {
         path: 'authorize',
         name: 'Authorize',
         component: () => import('@/views/Authorize.vue'),

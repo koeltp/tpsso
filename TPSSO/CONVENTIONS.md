@@ -179,13 +179,13 @@ dotnet ef migrations remove --project TPSSO.Infrastructure --startup-project TPS
     "LoginPath": "/login",
     "ConsentPath": "/authorize"
   },
-  "Smtp": {
+  "SmtpServer": {
     "Host": "smtp.qiye.aliyun.com",
     "Port": 587,
     "Username": "...",
     "Password": "",
-    "FromEmail": "...",
-    "FromName": "TPSSO",
+    "SenderEmail": "...",
+    "SenderName": "TPSSO",
     "UseSsl": true
   }
 }

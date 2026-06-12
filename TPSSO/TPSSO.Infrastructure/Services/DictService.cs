@@ -205,7 +205,15 @@ public class DictService : IDictService
                 return ResponseResult<DictItemResult>.BadRequest($"键 {dto.Key} 已存在");
 
             entity.Key = dto.Key;
-            entity.Value = dto.IsSensitive ? AesEncryption.Encrypt(dto.Value) : dto.Value;
+            // 敏感项编辑时未修改值（Value 为空），保留原值
+            if (dto.IsSensitive && string.IsNullOrEmpty(dto.Value))
+            {
+                // 保留原加密值，不更新
+            }
+            else
+            {
+                entity.Value = dto.IsSensitive ? AesEncryption.Encrypt(dto.Value) : dto.Value;
+            }
             entity.Description = dto.Description;
             entity.IsSensitive = dto.IsSensitive;
             entity.Sort = dto.Sort;
