@@ -72,6 +72,8 @@ builder.Services.AddOpenIddict()
         // 通过 OIDC Discovery 远程获取 Auth 服务的公钥和配置
         options.UseSystemNetHttp();
         // 设置 Auth 服务的 Issuer，OpenIddict 会自动访问 {Issuer}/.well-known/openid-configuration
+        Console.WriteLine("========================Auth:Issue========================================================================");
+        Console.WriteLine(builder.Configuration["Auth:Issuer"]);
         options.SetIssuer(new Uri(builder.Configuration["Auth:Issuer"]!));
         options.UseAspNetCore();
     });

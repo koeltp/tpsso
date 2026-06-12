@@ -120,7 +120,10 @@ docker compose up -d
 # 停止
 docker compose down
 ```
+```bash
+docker compose up -d authapi adminapi authweb adminweb
 
+```
 ## 文件结构
 
 ```

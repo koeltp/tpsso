@@ -65,7 +65,17 @@ services:
       - app
       - saas
       - infrastructure
-
+  cloudflared_sso:
+    container_name: cloudflared_sso
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARED_TOKEN_SSO}
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARED_TOKEN_SSO}
+    restart: unless-stopped
+    networks:
+      - infrastructure
+      - saas
+      - app
 # ==================== 数据卷 ====================
 volumes:
   admin_uploads:
