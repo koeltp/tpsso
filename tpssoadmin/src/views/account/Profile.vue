@@ -125,7 +125,7 @@ const beforeAvatarUpload: UploadProps['beforeUpload'] = (rawFile) => {
 }
 
 const handleAvatarSuccess: UploadProps['onSuccess'] = (response) => {
-  if (response.code === 200 && response.data) {
+  if (response.code === 0 && response.data) {
     profileForm.avatarUrl = response.data
     if (userStore.userInfo) {
       userStore.updateUserInfo({

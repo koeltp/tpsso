@@ -16,30 +16,30 @@ public interface IUserService
     /// <summary>
     /// 获取用户详情
     /// </summary>
-    Task<ResponseResult<UserListResult>> GetByIdAsync(Guid id);
+    Task<UserListResult> GetByIdAsync(Guid id);
 
     /// <summary>
     /// 获取所有角色列表
     /// </summary>
-    Task<ResponseResult<List<RoleResult>>> GetRolesAsync();
+    Task<List<RoleResult>> GetRolesAsync();
 
     /// <summary>
     /// 修改用户角色
     /// </summary>
-    Task<ResponseResult<bool>> UpdateRolesAsync(Guid id, Guid operatorId, UpdateUserRolesModel model);
+    Task UpdateRolesAsync(Guid id, Guid operatorId, UpdateUserRolesModel model);
 
     /// <summary>
     /// 禁用用户（锁定）
     /// </summary>
-    Task<ResponseResult<bool>> LockAsync(Guid id);
+    Task LockAsync(Guid id);
 
     /// <summary>
     /// 启用用户（解锁）
     /// </summary>
-    Task<ResponseResult<bool>> UnlockAsync(Guid id);
+    Task UnlockAsync(Guid id);
 
     /// <summary>
     /// 管理员重置用户密码
     /// </summary>
-    Task<ResponseResult<bool>> ResetPasswordAsync(Guid id, AdminResetPasswordModel model);
+    Task ResetPasswordAsync(Guid id, AdminResetPasswordModel model);
 }

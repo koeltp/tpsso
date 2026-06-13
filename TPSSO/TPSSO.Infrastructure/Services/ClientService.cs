@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using OpenIddict.Abstractions;
-using Org.BouncyCastle.Asn1.IsisMtt.X509;
 using Taipi.Core.Linq;
 using Taipi.Core.RQRS;
+using TPSSO.Application.Exceptions;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;
 using TPSSO.Domain.Entities;
@@ -31,9 +31,8 @@ public class ClientService : IClientService
         _logger = logger;
     }
 
-    public async Task<ResponseResult<ClientCreatedResult>> CreateAsync(CreateClientModel model, Guid userId)
+    public async Task<ClientCreatedResult> CreateAsync(CreateClientModel model, Guid userId)
     {
-        // 生成 ClientId
         var clientId = $"client_{Guid.NewGuid():N}"[..20];
 
         var client = new ClientApplication
@@ -50,65 +49,57 @@ public class ClientService : IClientService
         };
 
         _context.ClientApplications.Add(client);
-
-        // 机密客户端的 Secret 在审核通过时生成，创建阶段不生成
         await _context.SaveChangesAsync();
 
-        var result = ToCreatedResult(client);
-        return new ResponseResult<ClientCreatedResult>(result) { Code = 200, Message = "客户端创建成功" };
+        return ToCreatedResult(client);
     }
 
-    public async Task<ResponseResult<bool>> SubmitAsync(Guid id, Guid userId)
+    public async Task SubmitAsync(Guid id, Guid userId)
     {
         var client = await FindClientAsync(id);
         if (client == null)
-            return ResponseResult<bool>.NotFound("客户端不存在");
+            throw new AppException(AppCodes.ClientNotFound, "客户端不存在");
         if (client.CreatedByUserId != userId)
-            return ResponseResult<bool>.Forbidden("无权操作此客户端");
+            throw new ForbiddenException(AppCodes.ClientNoPermission, "无权操作此客户端");
         if (client.Status != ClientStatus.Draft)
-            return ResponseResult<bool>.BadRequest("仅草稿状态可提交审核");
+            throw new BadRequestException(AppCodes.ClientInvalidStatus, "仅草稿状态可提交审核");
 
-        // 提交前验证回调地址格式
         var invalidUris = client.RedirectUris.Where(u => !Uri.TryCreate(u.Uri, UriKind.Absolute, out var uri) || (uri.Scheme != "http" && uri.Scheme != "https")).ToList();
         if (invalidUris.Any())
-            return ResponseResult<bool>.BadRequest($"回调地址格式错误：{string.Join("、", invalidUris.Select(u => u.Uri))}");
+            throw new BadRequestException(AppCodes.ClientInvalidRedirectUri, $"回调地址格式错误：{string.Join("、", invalidUris.Select(u => u.Uri))}");
 
         client.Status = ClientStatus.Pending;
         client.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
-        return ResponseResult<bool>.Success("已提交审核");
     }
 
-    public async Task<ResponseResult<bool>> WithdrawAsync(Guid id, Guid userId)
+    public async Task WithdrawAsync(Guid id, Guid userId)
     {
         var client = await FindClientAsync(id);
         if (client == null)
-            return ResponseResult<bool>.NotFound("客户端不存在");
+            throw new AppException(AppCodes.ClientNotFound, "客户端不存在");
         if (client.CreatedByUserId != userId)
-            return ResponseResult<bool>.Forbidden("无权操作此客户端");
+            throw new ForbiddenException(AppCodes.ClientNoPermission, "无权操作此客户端");
         if (client.Status == ClientStatus.Draft)
-            return ResponseResult<bool>.BadRequest("已是草稿状态");
+            throw new BadRequestException(AppCodes.ClientInvalidStatus, "已是草稿状态");
 
         client.Status = ClientStatus.Draft;
         client.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
-        return ResponseResult<bool>.Success("已撤回，可重新编辑");
     }
 
-    public async Task<ResponseResult<bool>> ApproveAsync(Guid id, Guid reviewerId)
+    public async Task ApproveAsync(Guid id, Guid reviewerId)
     {
         var client = await FindClientAsync(id);
         if (client == null)
-            return ResponseResult<bool>.NotFound("客户端不存在");
+            throw new AppException(AppCodes.ClientNotFound, "客户端不存在");
         if (client.Status != ClientStatus.Pending)
-            return ResponseResult<bool>.BadRequest("仅待审核状态可审批");
+            throw new BadRequestException(AppCodes.ClientInvalidStatus, "仅待审核状态可审批");
 
-        // 验证回调地址格式
         var invalidUris = client.RedirectUris.Where(u => !Uri.TryCreate(u.Uri, UriKind.Absolute, out var uri) || (uri.Scheme != "http" && uri.Scheme != "https")).ToList();
         if (invalidUris.Any())
-            return ResponseResult<bool>.BadRequest($"回调地址格式错误：{string.Join("、", invalidUris.Select(u => u.Uri))}");
+            throw new BadRequestException(AppCodes.ClientInvalidRedirectUri, $"回调地址格式错误：{string.Join("、", invalidUris.Select(u => u.Uri))}");
 
-        // 同步到 OpenIddict Applications 表
         var redirectUris = client.RedirectUris.Select(u => new Uri(u.Uri)).ToList();
         var postLogoutUris = redirectUris.Select(u => new Uri(u.GetLeftPart(System.UriPartial.Authority))).Distinct().ToList();
 
@@ -121,7 +112,6 @@ public class ClientService : IClientService
             Permissions.GrantTypes.AuthorizationCode
         };
 
-        // 根据客户端允许的 scope 添加权限
         foreach (var scope in client.AllowedScopes)
         {
             if (scope.Scope == "profile") permissions.Add(Permissions.Scopes.Profile);
@@ -137,7 +127,6 @@ public class ClientService : IClientService
             ClientSecret = client.IsPublic ? null : GenerateSecret()
         };
 
-        // RedirectUris、PostLogoutRedirectUris、Permissions 是只读集合，需要通过 Add 添加
         foreach (var uri in redirectUris)
             descriptor.RedirectUris.Add(uri);
         foreach (var uri in postLogoutUris)
@@ -145,7 +134,6 @@ public class ClientService : IClientService
         foreach (var perm in permissions)
             descriptor.Permissions.Add(perm);
 
-        // 机密客户端设置 Secret
         if (!client.IsPublic)
         {
             var newSecret = GenerateSecret();
@@ -161,16 +149,15 @@ public class ClientService : IClientService
         client.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
-        return ResponseResult<bool>.Success("审核通过");
     }
 
-    public async Task<ResponseResult<bool>> RejectAsync(Guid id, Guid reviewerId, string reason)
+    public async Task RejectAsync(Guid id, Guid reviewerId, string reason)
     {
         var client = await FindClientAsync(id);
         if (client == null)
-            return ResponseResult<bool>.NotFound("客户端不存在");
+            throw new AppException(AppCodes.ClientNotFound, "客户端不存在");
         if (client.Status != ClientStatus.Pending)
-            return ResponseResult<bool>.BadRequest("仅待审核状态可审批");
+            throw new BadRequestException(AppCodes.ClientInvalidStatus, "仅待审核状态可审批");
 
         client.Status = ClientStatus.Rejected;
         client.ReviewedByUserId = reviewerId;
@@ -179,20 +166,18 @@ public class ClientService : IClientService
         client.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
-        return ResponseResult<bool>.Success("已拒绝");
     }
 
-    public async Task<ResponseResult<bool>> UpdateAsync(Guid id, Guid userId, UpdateClientModel model)
+    public async Task UpdateAsync(Guid id, Guid userId, UpdateClientModel model)
     {
         var client = await FindClientAsync(id);
         if (client == null)
-            return ResponseResult<bool>.NotFound("客户端不存在");
+            throw new AppException(AppCodes.ClientNotFound, "客户端不存在");
         if (client.CreatedByUserId != userId)
-            return ResponseResult<bool>.Forbidden("无权修改此客户端");
+            throw new ForbiddenException(AppCodes.ClientNoPermission, "无权修改此客户端");
         if (client.Status != ClientStatus.Draft)
-            return ResponseResult<bool>.BadRequest("仅草稿状态可编辑，请先撤回");
+            throw new BadRequestException(AppCodes.ClientInvalidStatus, "仅草稿状态可编辑，请先撤回");
 
-        // 设置乐观并发令牌：将前端传回的 RowVersion 还原到实体上
         if (!string.IsNullOrEmpty(model.RowVersion))
         {
             client.RowVersion = Convert.FromBase64String(model.RowVersion);
@@ -203,7 +188,6 @@ public class ClientService : IClientService
         client.Logo = model.Logo;
         client.UpdatedAt = DateTime.UtcNow;
 
-        // 更新回调地址：先删除旧记录，再添加新记录
         var oldUris = await _context.ClientRedirectUris.Where(u => u.ClientApplicationId == id).ToListAsync();
         _context.ClientRedirectUris.RemoveRange(oldUris);
         _context.ClientRedirectUris.AddRange(ParseRedirectUris(model.RedirectUris).Select(u =>
@@ -212,7 +196,6 @@ public class ClientService : IClientService
             return u;
         }));
 
-        // 更新 Scopes：同上
         var oldScopes = await _context.ClientScopes.Where(s => s.ClientApplicationId == id).ToListAsync();
         _context.ClientScopes.RemoveRange(oldScopes);
         _context.ClientScopes.AddRange(ParseScopes(model.AllowedScopes).Select(s =>
@@ -227,26 +210,22 @@ public class ClientService : IClientService
         }
         catch (DbUpdateConcurrencyException)
         {
-            return ResponseResult<bool>.BadRequest("数据已被其他操作修改，请刷新后重试");
+            throw new BadRequestException(AppCodes.ConcurrencyConflict, "数据已被其他操作修改，请刷新后重试");
         }
-
-        return ResponseResult<bool>.Success("更新成功");
     }
 
-    public async Task<ResponseResult<bool>> DeleteAsync(Guid id, Guid userId)
+    public async Task DeleteAsync(Guid id, Guid userId)
     {
         var client = await FindClientAsync(id);
         if (client == null)
-            return ResponseResult<bool>.NotFound("客户端不存在");
+            throw new AppException(AppCodes.ClientNotFound, "客户端不存在");
 
-        // 系统内置客户端禁止删除
         if (client.ClientId == SystemClientIds.AdminClient)
-            return ResponseResult<bool>.BadRequest("系统内置客户端，禁止删除");
+            throw new BadRequestException(AppCodes.ClientBuiltIn, "系统内置客户端，禁止删除");
 
         if (client.CreatedByUserId != userId)
-            return ResponseResult<bool>.Forbidden("无权删除此客户端");
+            throw new ForbiddenException(AppCodes.ClientNoPermission, "无权删除此客户端");
 
-        // 如果已同步到 OpenIddict，删除对应记录
         if (!string.IsNullOrEmpty(client.OpenIddictApplicationId))
         {
             var openIddictApp = await _applicationManager.FindByIdAsync(client.OpenIddictApplicationId);
@@ -258,7 +237,6 @@ public class ClientService : IClientService
         _context.ClientScopes.RemoveRange(client.AllowedScopes);
         _context.ClientApplications.Remove(client);
         await _context.SaveChangesAsync();
-        return ResponseResult<bool>.Success("已删除");
     }
 
     public async Task<PagerResponseResult<ClientResult>> SearchAsync(SearchPager<ClientSearchCondition> pager, Guid userId, bool isAdmin)
@@ -268,21 +246,17 @@ public class ClientService : IClientService
             .Include(c => c.AllowedScopes)
             .AsQueryable();
 
-        // 非管理员只能查自己的客户端
         query = query.WhereIf(!isAdmin, c => c.CreatedByUserId == userId);
 
-        // 按状态筛选
         query = query.WhereIf(
             pager.Condition?.Status.HasValue == true,
             c => c.Status == pager.Condition!.Status!.Value);
 
-        // 按关键字模糊搜索（名称或 ClientId）
         var keyword = pager.Condition?.Keyword?.Trim();
         query = query.WhereIf(
             !string.IsNullOrEmpty(keyword),
             c => c.Name.Contains(keyword!) || c.ClientId.Contains(keyword!));
 
-        // 默认按创建时间降序
         query = query.OrderByDescending(c => c.CreatedAt);
 
         var totalCount = await query.CountAsync();
@@ -291,40 +265,31 @@ public class ClientService : IClientService
         return new PagerResponseResult<ClientResult>(items.Select(ToResult), pager, totalCount);
     }
 
-    public async Task<ResponseResult<ClientResult>> GetByIdAsync(Guid id)
+    public async Task<ClientResult> GetByIdAsync(Guid id)
     {
         var client = await FindClientAsync(id);
         if (client == null)
-            return ResponseResult<ClientResult>.NotFound("客户端不存在");
+            throw new AppException(AppCodes.ClientNotFound, "客户端不存在");
 
-        return new ResponseResult<ClientResult>(ToResult(client)) { Code = 200 };
+        return ToResult(client);
     }
 
-    public async Task<ResponseResult<ClientCreatedResult>> RegenerateSecretAsync(Guid id, Guid userId)
+    public async Task<ClientCreatedResult> RegenerateSecretAsync(Guid id, Guid userId)
     {
         var client = await FindClientAsync(id);
         if (client == null)
-            return ResponseResult<ClientCreatedResult>.NotFound("客户端不存在");
+            throw new AppException(AppCodes.ClientNotFound, "客户端不存在");
 
         if (client.IsPublic)
-            return ResponseResult<ClientCreatedResult>.BadRequest("公开客户端没有密钥");
+            throw new BadRequestException(AppCodes.ClientNoSecret, "公开客户端没有密钥");
 
         if (client.Status != ClientStatus.Approved)
-            return ResponseResult<ClientCreatedResult>.BadRequest("仅审核通过的客户端可操作密钥");
+            throw new BadRequestException(AppCodes.ClientInvalidStatus, "仅审核通过的客户端可操作密钥");
 
-        // 权限检查：客户端所有者或管理员可重置
-        if (client.CreatedByUserId != userId)
-        {
-            // 管理员检查通过角色判断，此处简化为允许（控制器层已做角色校验）
-            // 如果需要严格检查，可传入 isAdmin 参数
-        }
-
-        // 生成新密钥
         var plainSecret = GenerateSecret();
         client.ClientSecretHash = BCrypt.Net.BCrypt.HashPassword(plainSecret);
         client.UpdatedAt = DateTime.UtcNow;
 
-        // 如果已同步到 OpenIddict，同步更新 Secret
         if (!string.IsNullOrEmpty(client.OpenIddictApplicationId))
         {
             var openIddictApp = await _applicationManager.FindByIdAsync(client.OpenIddictApplicationId);
@@ -338,7 +303,7 @@ public class ClientService : IClientService
 
         var result = ToCreatedResult(client);
         result.PlainSecret = plainSecret;
-        return new ResponseResult<ClientCreatedResult>(result) { Code = 200, Message = "密钥已重置" };
+        return result;
     }
 
     // ──────── 私有方法 ────────

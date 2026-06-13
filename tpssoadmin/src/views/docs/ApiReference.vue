@@ -59,8 +59,7 @@
       <pre>{
   "code": 200,
   "message": "success",
-  "data": { ... },
-  "timestamp": 1718000000000
+  "data": { ... }
 }</pre>
     </el-card>
   </div>

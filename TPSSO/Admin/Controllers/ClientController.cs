@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Abstractions;
 using Taipi.Core.RQRS;
+using TPSSO.Application.Exceptions;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;
 
@@ -27,7 +28,8 @@ public class ClientController : ControllerBase
     public async Task<ResponseResult<ClientCreatedResult>> Create([FromBody] CreateClientModel model)
     {
         var userId = GetUserId();
-        return await _clientService.CreateAsync(model, userId);
+        var data = await _clientService.CreateAsync(model, userId);
+        return new ResponseResult<ClientCreatedResult>(data) { Message = "客户端创建成功" };
     }
 
     /// <summary>
@@ -59,7 +61,8 @@ public class ClientController : ControllerBase
     [Authorize]
     public async Task<ResponseResult<ClientResult>> GetById(Guid id)
     {
-        return await _clientService.GetByIdAsync(id);
+        var data = await _clientService.GetByIdAsync(id);
+        return new ResponseResult<ClientResult>(data);
     }
 
     /// <summary>
@@ -67,10 +70,11 @@ public class ClientController : ControllerBase
     /// </summary>
     [HttpPut("{id}")]
     [Authorize]
-    public async Task<ResponseResult<bool>> Update(Guid id, [FromBody] UpdateClientModel model)
+    public async Task<StatusResponseResult> Update(Guid id, [FromBody] UpdateClientModel model)
     {
         var userId = GetUserId();
-        return await _clientService.UpdateAsync(id, userId, model);
+        await _clientService.UpdateAsync(id, userId, model);
+        return StatusResponseResult.Success("更新成功");
     }
 
     /// <summary>
@@ -78,10 +82,11 @@ public class ClientController : ControllerBase
     /// </summary>
     [HttpPost("{id}/submit")]
     [Authorize]
-    public async Task<ResponseResult<bool>> Submit(Guid id)
+    public async Task<StatusResponseResult> Submit(Guid id)
     {
         var userId = GetUserId();
-        return await _clientService.SubmitAsync(id, userId);
+        await _clientService.SubmitAsync(id, userId);
+        return StatusResponseResult.Success("已提交审核");
     }
 
     /// <summary>
@@ -89,10 +94,11 @@ public class ClientController : ControllerBase
     /// </summary>
     [HttpPost("{id}/withdraw")]
     [Authorize]
-    public async Task<ResponseResult<bool>> Withdraw(Guid id)
+    public async Task<StatusResponseResult> Withdraw(Guid id)
     {
         var userId = GetUserId();
-        return await _clientService.WithdrawAsync(id, userId);
+        await _clientService.WithdrawAsync(id, userId);
+        return StatusResponseResult.Success("已撤回，可重新编辑");
     }
 
     /// <summary>
@@ -100,10 +106,11 @@ public class ClientController : ControllerBase
     /// </summary>
     [HttpDelete("{id}")]
     [Authorize]
-    public async Task<ResponseResult<bool>> Delete(Guid id)
+    public async Task<StatusResponseResult> Delete(Guid id)
     {
         var userId = GetUserId();
-        return await _clientService.DeleteAsync(id, userId);
+        await _clientService.DeleteAsync(id, userId);
+        return StatusResponseResult.Success("已删除");
     }
 
     /// <summary>
@@ -111,10 +118,11 @@ public class ClientController : ControllerBase
     /// </summary>
     [HttpPost("{id}/approve")]
     [Authorize(Roles = "Admin")]
-    public async Task<ResponseResult<bool>> Approve(Guid id)
+    public async Task<StatusResponseResult> Approve(Guid id)
     {
         var reviewerId = GetUserId();
-        return await _clientService.ApproveAsync(id, reviewerId);
+        await _clientService.ApproveAsync(id, reviewerId);
+        return StatusResponseResult.Success("审核通过");
     }
 
     /// <summary>
@@ -122,10 +130,11 @@ public class ClientController : ControllerBase
     /// </summary>
     [HttpPost("{id}/reject")]
     [Authorize(Roles = "Admin")]
-    public async Task<ResponseResult<bool>> Reject(Guid id, [FromBody] RejectClientModel model)
+    public async Task<StatusResponseResult> Reject(Guid id, [FromBody] RejectClientModel model)
     {
         var reviewerId = GetUserId();
-        return await _clientService.RejectAsync(id, reviewerId, model.Reason);
+        await _clientService.RejectAsync(id, reviewerId, model.Reason);
+        return StatusResponseResult.Success("已拒绝");
     }
 
     /// <summary>
@@ -136,7 +145,8 @@ public class ClientController : ControllerBase
     public async Task<ResponseResult<ClientCreatedResult>> RegenerateSecret(Guid id)
     {
         var userId = GetUserId();
-        return await _clientService.RegenerateSecretAsync(id, userId);
+        var data = await _clientService.RegenerateSecretAsync(id, userId);
+        return new ResponseResult<ClientCreatedResult>(data) { Message = "密钥已重置" };
     }
 
     /// <summary>

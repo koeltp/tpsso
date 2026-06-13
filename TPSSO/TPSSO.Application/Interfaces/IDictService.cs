@@ -9,19 +9,19 @@ namespace TPSSO.Application.Interfaces;
 public interface IDictService
 {
     /// <summary>获取所有字典类型（含字典项）</summary>
-    Task<ResponseResult<List<DictTypeResult>>> GetAllAsync();
+    Task<List<DictTypeResult>> GetAllAsync();
 
     /// <summary>创建或更新字典类型</summary>
-    Task<ResponseResult<DictTypeResult>> SaveTypeAsync(DictTypeDto dto);
+    Task<DictTypeResult> SaveTypeAsync(DictTypeDto dto);
 
     /// <summary>删除字典类型</summary>
-    Task<ResponseResult<bool>> DeleteTypeAsync(Guid id);
+    Task DeleteTypeAsync(Guid id);
 
     /// <summary>创建或更新字典项</summary>
-    Task<ResponseResult<DictItemResult>> SaveItemAsync(Guid typeId, DictItemDto dto);
+    Task<DictItemResult> SaveItemAsync(Guid typeId, DictItemDto dto);
 
     /// <summary>删除字典项</summary>
-    Task<ResponseResult<bool>> DeleteItemAsync(Guid id);
+    Task DeleteItemAsync(Guid id);
 }
 
 /// <summary>

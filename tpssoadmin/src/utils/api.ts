@@ -7,6 +7,7 @@ interface ResponseResult<T = unknown> {
   code: number
   message?: string
   data?: T
+  correlationId?: string
 }
 
 const api = axios.create({
@@ -35,7 +36,8 @@ api.interceptors.response.use(
 
     const { code, message, data } = body as ResponseResult
 
-    if (code !== 200) {
+    // code=0 表示成功，非0表示业务错误码
+    if (code !== 0) {
       ElMessage.error(message || '请求失败')
       return Promise.reject(new Error(message))
     }
@@ -70,10 +72,11 @@ api.interceptors.response.use(
     if (!error.response) {
       ElMessage.error('网络连接失败，请检查网络')
     } else if (error.response?.status !== 401) {
-      // 后端错误响应也遵循 { code, message, data } 格式
       const errorData = error.response.data as ResponseResult | undefined
       const message = errorData?.message || '网络错误'
-      ElMessage.error(message)
+      const correlationId = errorData?.correlationId
+      // 500 错误附带 correlationId，便于用户反馈问题时提供追踪标识
+      ElMessage.error(correlationId ? `${message}（追踪ID: ${correlationId}）` : message)
     }
 
     return Promise.reject(error)

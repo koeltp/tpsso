@@ -60,7 +60,7 @@ public class AuthorizationController : ControllerBase
 
         // 查找客户端应用
         _logger.LogInformation("尝试查找客户端应用。");
-        var application = await _applicationManager.FindByClientIdAsync(request.ClientId);
+        var application = await _applicationManager.FindByClientIdAsync(request.ClientId!);
         if (application == null)
             throw new InvalidOperationException("客户端应用不存在。");
         _logger.LogInformation("客户端应用已找到。");
@@ -76,19 +76,19 @@ public class AuthorizationController : ControllerBase
         _logger.LogInformation("用户已找到。");
 
         var appName = (await _applicationManager.GetDisplayNameAsync(application)) ?? request.ClientId;
-        _logger.LogInformation($"客户端应用显示名称：{appName}。");
+        _logger.LogInformation("客户端应用显示名称：{appName}。", appName);
 
         // 重定向到前端授权确认页面
         var consentUrl = $"{_ssoOptions.LoginBaseUrl}{_ssoOptions.ConsentPath}" +
-            $"?client_id={Uri.EscapeDataString(request.ClientId)}" +
+            $"?client_id={Uri.EscapeDataString(request.ClientId!)}" +
             $"&scope={Uri.EscapeDataString(string.Join(" ", request.GetScopes()))}" +
             $"&redirect_uri={Uri.EscapeDataString(request.RedirectUri ?? "")}" +
             $"&state={Uri.EscapeDataString(request.State ?? "")}" +
             $"&response_type={Uri.EscapeDataString(request.ResponseType ?? "")}" +
             $"&code_challenge={Uri.EscapeDataString(request.CodeChallenge ?? "")}" +
             $"&code_challenge_method={Uri.EscapeDataString(request.CodeChallengeMethod ?? "")}" +
-            $"&app_name={Uri.EscapeDataString(appName)}";
-        _logger.LogInformation($"重定向到授权确认页面：{consentUrl}。");
+            $"&app_name={Uri.EscapeDataString(appName!)}";
+        _logger.LogInformation("重定向到授权确认页面：{consentUrl}。", consentUrl);
         return Redirect(consentUrl);
     }
 
@@ -114,7 +114,7 @@ public class AuthorizationController : ControllerBase
 
         // 查找用户
         _logger.LogInformation("尝试查找用户。");
-        var application = await _applicationManager.FindByClientIdAsync(request.ClientId);
+        var application = await _applicationManager.FindByClientIdAsync(request.ClientId!);
         if (application == null)
             throw new InvalidOperationException("客户端应用不存在。");
         _logger.LogInformation("客户端应用已找到。");
@@ -141,13 +141,15 @@ public class AuthorizationController : ControllerBase
 
         if (scopes.Contains(Scopes.Profile))
         {
-            identity.AddClaim(new Claim(Claims.Name, await _userManager.GetUserNameAsync(user))
+            var name = await _userManager.GetUserNameAsync(user);
+            identity.AddClaim(new Claim(Claims.Name, name!)
                 .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
         }
 
         if (scopes.Contains(Scopes.Email))
         {
-            identity.AddClaim(new Claim(Claims.Email, await _userManager.GetEmailAsync(user))
+            var mail = await _userManager.GetEmailAsync(user);
+            identity.AddClaim(new Claim(Claims.Email, mail!)
                 .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
         }
 
@@ -235,13 +237,11 @@ public class AuthorizationController : ControllerBase
                 var identity = new ClaimsIdentity(
                     result.Principal.Identities.First().Claims,
                     authenticationType: TokenValidationParameters.DefaultAuthenticationType);
-                _logger.LogInformation("用户已登录，授权码：{result.Properties.Code}。");
 
                 // 重新创建 principal，确保包含最新的声明
                 var newPrincipal = new ClaimsPrincipal(identity);
                 newPrincipal.SetScopes(request.GetScopes());
                 newPrincipal.SetResources(await _scopeManager.ListResourcesAsync(request.GetScopes()).ToListAsync());
-                _logger.LogInformation("用户已登录，授权码：{result.Properties.Code}，资源：{string.Join(',', request.GetScopes())}。");
 
 
 

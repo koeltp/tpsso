@@ -1,8 +1,9 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Abstractions;
+using System.Security.Claims;
 using Taipi.Core.RQRS;
+using TPSSO.Application.Exceptions;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;
 
@@ -35,7 +36,8 @@ public class UserController : ControllerBase
     [HttpGet("{id}")]
     public async Task<ResponseResult<UserListResult>> GetById(Guid id)
     {
-        return await _userService.GetByIdAsync(id);
+        var data = await _userService.GetByIdAsync(id);
+        return new ResponseResult<UserListResult>(data);
     }
 
     /// <summary>
@@ -44,44 +46,49 @@ public class UserController : ControllerBase
     [HttpGet("roles")]
     public async Task<ResponseResult<List<RoleResult>>> GetRoles()
     {
-        return await _userService.GetRolesAsync();
+        var data = await _userService.GetRolesAsync();
+        return new ResponseResult<List<RoleResult>>(data);
     }
 
     /// <summary>
     /// 修改用户角色
     /// </summary>
     [HttpPut("{id}/roles")]
-    public async Task<ResponseResult<bool>> UpdateRoles(Guid id, [FromBody] UpdateUserRolesModel model)
+    public async Task<StatusResponseResult> UpdateRoles(Guid id, [FromBody] UpdateUserRolesModel model)
     {
         var operatorId = GetUserId();
-        return await _userService.UpdateRolesAsync(id, operatorId, model);
+        await _userService.UpdateRolesAsync(id, operatorId, model);
+        return StatusResponseResult.Success("角色更新成功");
     }
 
     /// <summary>
     /// 禁用用户（锁定）
     /// </summary>
     [HttpPost("{id}/lock")]
-    public async Task<ResponseResult<bool>> Lock(Guid id)
+    public async Task<StatusResponseResult> Lock(Guid id)
     {
-        return await _userService.LockAsync(id);
+        await _userService.LockAsync(id);
+        return StatusResponseResult.Success("已禁用");
     }
 
     /// <summary>
     /// 启用用户（解锁）
     /// </summary>
     [HttpPost("{id}/unlock")]
-    public async Task<ResponseResult<bool>> Unlock(Guid id)
+    public async Task<StatusResponseResult> Unlock(Guid id)
     {
-        return await _userService.UnlockAsync(id);
+        await _userService.UnlockAsync(id);
+        return StatusResponseResult.Success("已启用");
     }
 
     /// <summary>
     /// 管理员重置用户密码
     /// </summary>
     [HttpPost("{id}/reset-password")]
-    public async Task<ResponseResult<bool>> ResetPassword(Guid id, [FromBody] AdminResetPasswordModel model)
+    public async Task<StatusResponseResult> ResetPassword(Guid id, [FromBody] AdminResetPasswordModel model)
     {
-        return await _userService.ResetPasswordAsync(id, model);
+        await _userService.ResetPasswordAsync(id, model);
+        return StatusResponseResult.Success("密码已重置");
     }
 
     /// <summary>

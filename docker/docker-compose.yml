@@ -13,6 +13,7 @@ services:
       - ./config/certbot/encryption.pfx:/app/certbot/encryption.pfx
       - ./config/certbot/signing.pfx:/app/certbot/signing.pfx
       - ./config/authapi/appsettings.Production.json:/app/appsettings.Production.json:ro
+      - ./logs/authapi:/app/logs
     networks:
       - app
       - saas
@@ -31,6 +32,7 @@ services:
     volumes:
       - admin_uploads:/app/wwwroot/avatars
       - ./config/adminapi/appsettings.Production.json:/app/appsettings.Production.json:ro
+      - ./logs/adminapi:/app/logs
     depends_on:
       - authapi
     networks:

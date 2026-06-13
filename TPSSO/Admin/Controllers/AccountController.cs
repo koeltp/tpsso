@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using OpenIddict.Abstractions;
 using Taipi.Core.RQRS;
+using TPSSO.Application.Exceptions;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;
 using TPSSO.Application.Options;
@@ -32,7 +33,8 @@ public class AccountController : ControllerBase
     [Authorize]
     public async Task<ResponseResult<UserInfoResult>> Me()
     {
-        return await _accountService.GetCurrentUserAsync(User);
+        var data = await _accountService.GetCurrentUserAsync(User);
+        return new ResponseResult<UserInfoResult>(data);
     }
 
     /// <summary>
@@ -40,9 +42,10 @@ public class AccountController : ControllerBase
     /// </summary>
     [HttpPut("profile")]
     [Authorize]
-    public async Task<ResponseResult<bool>> UpdateProfile([FromBody] UpdateProfileModel model)
+    public async Task<StatusResponseResult> UpdateProfile([FromBody] UpdateProfileModel model)
     {
-        return await _accountService.UpdateProfileAsync(User, model);
+        await _accountService.UpdateProfileAsync(User, model);
+        return StatusResponseResult.Success("修改成功");
     }
 
     /// <summary>
@@ -50,19 +53,19 @@ public class AccountController : ControllerBase
     /// </summary>
     [HttpPost("avatar")]
     [Authorize]
-    public async Task<ResponseResult<string>> UploadAvatar(IFormFile file)
+    public async Task<StatusResponseResult> UploadAvatar(IFormFile file)
     {
         if (file == null || file.Length == 0)
-            return ResponseResult<string>.BadRequest("请选择文件");
+            throw new BadRequestException(AppCodes.UploadEmpty, "请选择文件");
 
         var allowedTypes = _uploadOptions.AvatarAllowedTypes.Split(',');
         if (!allowedTypes.Contains(file.ContentType))
         {
             allowedTypes = [.. allowedTypes.Select(x => x.Split('/')[1])];
-            return ResponseResult<string>.BadRequest($"仅支持 {string.Join("、", allowedTypes)} 格式");
+            throw new BadRequestException(AppCodes.UploadInvalidType, $"仅支持 {string.Join("、", allowedTypes)} 格式");
         }
         if (file.Length > _uploadOptions.AvatarMaxSizeMB * 1024 * 1024)
-            return ResponseResult<string>.BadRequest($"文件大小不能超过 {_uploadOptions.AvatarMaxSizeMB}MB");
+            throw new BadRequestException(AppCodes.UploadTooLarge, $"文件大小不能超过 {_uploadOptions.AvatarMaxSizeMB}MB");
 
         var userId = User.FindFirst(OpenIddictConstants.Claims.Subject)?.Value ?? "unknown";
         var ext = Path.GetExtension(file.FileName);
@@ -80,7 +83,8 @@ public class AccountController : ControllerBase
         }
 
         var avatarUrl = $"/avatars/{newFileName}";
-        return await _accountService.UpdateAvatarUrlAsync(User, avatarUrl);
+        await _accountService.UpdateAvatarUrlAsync(User, avatarUrl);
+        return StatusResponseResult.Success("上传成功");
     }
 
     /// <summary>
@@ -88,8 +92,9 @@ public class AccountController : ControllerBase
     /// </summary>
     [HttpPut("password")]
     [Authorize]
-    public async Task<ResponseResult<bool>> ChangePassword([FromBody] ChangePasswordModel model)
+    public async Task<StatusResponseResult> ChangePassword([FromBody] ChangePasswordModel model)
     {
-        return await _accountService.ChangePasswordAsync(User, model);
+        await _accountService.ChangePasswordAsync(User, model);
+        return StatusResponseResult.Success("密码修改成功");
     }
 }

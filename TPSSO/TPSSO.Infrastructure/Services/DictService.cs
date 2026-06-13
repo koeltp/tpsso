@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Taipi.Core.RQRS;
+using TPSSO.Application.Exceptions;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;
 using TPSSO.Domain.Entities;
@@ -17,9 +18,8 @@ public class DictService : IDictService
         _context = context;
     }
 
-    public async Task<ResponseResult<List<DictTypeResult>>> GetAllAsync()
+    public async Task<List<DictTypeResult>> GetAllAsync()
     {
-        // 一次性查出所有类型和配置项，在内存中构建树
         var types = await _context.DictTypes
             .Include(t => t.Items)
             .OrderBy(t => t.Sort)
@@ -49,10 +49,7 @@ public class DictService : IDictService
                 }).ToList()
         }).ToList();
 
-        // 构建树形结构
-        var tree = BuildTree(allResults);
-
-        return new ResponseResult<List<DictTypeResult>>(tree) { Code = 200 };
+        return BuildTree(allResults);
     }
 
     /// <summary>
@@ -78,16 +75,15 @@ public class DictService : IDictService
         return roots;
     }
 
-    public async Task<ResponseResult<DictTypeResult>> SaveTypeAsync(DictTypeDto dto)
+    public async Task<DictTypeResult> SaveTypeAsync(DictTypeDto dto)
     {
-        // 防止循环引用：父分类不能是自身或自身的子级
         if (dto.ParentId.HasValue && dto.Id.HasValue)
         {
             if (dto.ParentId == dto.Id)
-                return ResponseResult<DictTypeResult>.BadRequest("父分类不能是自身");
+                throw new BadRequestException(AppCodes.DictParentSelf, "父分类不能是自身");
 
             if (await IsDescendantAsync(dto.Id.Value, dto.ParentId.Value))
-                return ResponseResult<DictTypeResult>.BadRequest("父分类不能是自身的子级");
+                throw new BadRequestException(AppCodes.DictParentSelf, "父分类不能是自身的子级");
         }
 
         DictType entity;
@@ -95,7 +91,7 @@ public class DictService : IDictService
         if (dto.Id.HasValue)
         {
             entity = await _context.DictTypes.FindAsync(dto.Id.Value)
-                ?? throw new KeyNotFoundException("字典类型不存在");
+                ?? throw new AppException(AppCodes.DictTypeNotFound, "字典类型不存在");
             entity.Code = dto.Code;
             entity.Name = dto.Name;
             entity.Description = dto.Description;
@@ -107,7 +103,7 @@ public class DictService : IDictService
         else
         {
             if (await _context.DictTypes.AnyAsync(t => t.Code == dto.Code))
-                return ResponseResult<DictTypeResult>.BadRequest($"类型编码 {dto.Code} 已存在");
+                throw new BadRequestException(AppCodes.DictCodeExists, $"类型编码 {dto.Code} 已存在");
 
             entity = new DictType
             {
@@ -123,7 +119,7 @@ public class DictService : IDictService
 
         await _context.SaveChangesAsync();
 
-        return new ResponseResult<DictTypeResult>(new DictTypeResult
+        return new DictTypeResult
         {
             Id = entity.Id,
             Code = entity.Code,
@@ -132,7 +128,7 @@ public class DictService : IDictService
             Sort = entity.Sort,
             IsEnabled = entity.IsEnabled,
             ParentId = entity.ParentId,
-        }) { Code = 200, Message = dto.Id.HasValue ? "更新成功" : "创建成功" };
+        };
     }
 
     /// <summary>
@@ -150,7 +146,7 @@ public class DictService : IDictService
         return false;
     }
 
-    public async Task<ResponseResult<bool>> DeleteTypeAsync(Guid id)
+    public async Task DeleteTypeAsync(Guid id)
     {
         var entity = await _context.DictTypes
             .Include(t => t.Items)
@@ -158,14 +154,10 @@ public class DictService : IDictService
             .FirstOrDefaultAsync(t => t.Id == id);
 
         if (entity == null)
-            return ResponseResult<bool>.NotFound("字典类型不存在");
+            throw new AppException(AppCodes.DictTypeNotFound, "字典类型不存在");
 
-        // 递归删除子分类及其配置项
         await DeleteTypeRecursiveAsync(entity);
-
         await _context.SaveChangesAsync();
-
-        return ResponseResult<bool>.Success("删除成功");
     }
 
     /// <summary>
@@ -173,7 +165,6 @@ public class DictService : IDictService
     /// </summary>
     private async Task DeleteTypeRecursiveAsync(DictType entity)
     {
-        // 先递归删除子分类
         foreach (var child in entity.Children.ToList())
         {
             var loaded = await _context.DictTypes
@@ -188,27 +179,26 @@ public class DictService : IDictService
         _context.DictTypes.Remove(entity);
     }
 
-    public async Task<ResponseResult<DictItemResult>> SaveItemAsync(Guid typeId, DictItemDto dto)
+    public async Task<DictItemResult> SaveItemAsync(Guid typeId, DictItemDto dto)
     {
         var typeExists = await _context.DictTypes.AnyAsync(t => t.Id == typeId);
         if (!typeExists)
-            return ResponseResult<DictItemResult>.BadRequest("字典类型不存在");
+            throw new BadRequestException(AppCodes.DictTypeNotFound, "字典类型不存在");
 
         DictItem entity;
 
         if (dto.Id.HasValue)
         {
             entity = await _context.DictItems.FindAsync(dto.Id.Value)
-                ?? throw new KeyNotFoundException("字典项不存在");
+                ?? throw new AppException(AppCodes.DictItemNotFound, "字典项不存在");
 
             if (entity.Key != dto.Key && await _context.DictItems.AnyAsync(i => i.TypeId == typeId && i.Key == dto.Key))
-                return ResponseResult<DictItemResult>.BadRequest($"键 {dto.Key} 已存在");
+                throw new BadRequestException(AppCodes.DictCodeExists, $"键 {dto.Key} 已存在");
 
             entity.Key = dto.Key;
-            // 敏感项编辑时未修改值（Value 为空），保留原值
             if (dto.IsSensitive && string.IsNullOrEmpty(dto.Value))
             {
-                // 保留原加密值，不更新
+                // 敏感项编辑时未修改值，保留原值
             }
             else
             {
@@ -223,7 +213,7 @@ public class DictService : IDictService
         else
         {
             if (await _context.DictItems.AnyAsync(i => i.TypeId == typeId && i.Key == dto.Key))
-                return ResponseResult<DictItemResult>.BadRequest($"键 {dto.Key} 已存在");
+                throw new BadRequestException(AppCodes.DictCodeExists, $"键 {dto.Key} 已存在");
 
             entity = new DictItem
             {
@@ -240,7 +230,7 @@ public class DictService : IDictService
 
         await _context.SaveChangesAsync();
 
-        return new ResponseResult<DictItemResult>(new DictItemResult
+        return new DictItemResult
         {
             Id = entity.Id,
             TypeId = entity.TypeId,
@@ -250,18 +240,16 @@ public class DictService : IDictService
             Description = entity.Description,
             Sort = entity.Sort,
             IsEnabled = entity.IsEnabled,
-        }) { Code = 200, Message = dto.Id.HasValue ? "更新成功" : "创建成功" };
+        };
     }
 
-    public async Task<ResponseResult<bool>> DeleteItemAsync(Guid id)
+    public async Task DeleteItemAsync(Guid id)
     {
         var entity = await _context.DictItems.FindAsync(id);
         if (entity == null)
-            return ResponseResult<bool>.NotFound("字典项不存在");
+            throw new AppException(AppCodes.DictItemNotFound, "字典项不存在");
 
         _context.DictItems.Remove(entity);
         await _context.SaveChangesAsync();
-
-        return ResponseResult<bool>.Success("删除成功");
     }
 }

@@ -24,7 +24,8 @@ public class DictController : ControllerBase
     [HttpGet]
     public async Task<ResponseResult<List<DictTypeResult>>> GetAll()
     {
-        return await _dictService.GetAllAsync();
+        var data = await _dictService.GetAllAsync();
+        return new ResponseResult<List<DictTypeResult>>(data);
     }
 
     /// <summary>
@@ -33,16 +34,18 @@ public class DictController : ControllerBase
     [HttpPost("types")]
     public async Task<ResponseResult<DictTypeResult>> SaveType([FromBody] DictTypeDto dto)
     {
-        return await _dictService.SaveTypeAsync(dto);
+        var data = await _dictService.SaveTypeAsync(dto);
+        return new ResponseResult<DictTypeResult>(data) { Message = dto.Id.HasValue ? "更新成功" : "创建成功" };
     }
 
     /// <summary>
     /// 删除字典类型
     /// </summary>
     [HttpDelete("types/{id}")]
-    public async Task<ResponseResult<bool>> DeleteType(Guid id)
+    public async Task<StatusResponseResult> DeleteType(Guid id)
     {
-        return await _dictService.DeleteTypeAsync(id);
+        await _dictService.DeleteTypeAsync(id);
+        return StatusResponseResult.Success("删除成功");
     }
 
     /// <summary>
@@ -51,15 +54,17 @@ public class DictController : ControllerBase
     [HttpPost("types/{typeId}/items")]
     public async Task<ResponseResult<DictItemResult>> SaveItem(Guid typeId, [FromBody] DictItemDto dto)
     {
-        return await _dictService.SaveItemAsync(typeId, dto);
+        var data = await _dictService.SaveItemAsync(typeId, dto);
+        return new ResponseResult<DictItemResult>(data) { Message = dto.Id.HasValue ? "更新成功" : "创建成功" };
     }
 
     /// <summary>
     /// 删除字典项
     /// </summary>
     [HttpDelete("items/{id}")]
-    public async Task<ResponseResult<bool>> DeleteItem(Guid id)
+    public async Task<StatusResponseResult> DeleteItem(Guid id)
     {
-        return await _dictService.DeleteItemAsync(id);
+        await _dictService.DeleteItemAsync(id);
+        return StatusResponseResult.Success("删除成功");
     }
 }

@@ -1,10 +1,8 @@
 using System.Text.Json;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
 using Taipi.Core.RQRS;
 using TPSSO.Application.Exceptions;
 
-namespace TPSSO.Auth.Middleware;
+namespace TPSSO.Admin.Middleware;
 
 /// <summary>
 /// 全局异常处理中间件：

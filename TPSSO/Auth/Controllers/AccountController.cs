@@ -26,17 +26,19 @@ public class AccountController : ControllerBase
     public async Task<ResponseResult<UserInfoResult>> Login([FromBody] LoginModel model)
     {
         _logger.LogInformation("用户登录，用户名：{Username}。", model.Username);
-        return await _accountService.LoginAsync(model);
+        var data = await _accountService.LoginAsync(model);
+        return ResponseResult<UserInfoResult>.Success(data);
     }
 
     /// <summary>
     /// 用户登出
     /// </summary>
     [HttpPost("logout")]
-    public async Task<ResponseResult<bool>> Logout()
+    public async Task<StatusResponseResult> Logout()
     {
         _logger.LogInformation("用户登出。");
-        return await _accountService.LogoutAsync();
+        await _accountService.LogoutAsync();
+        return StatusResponseResult.Success("已登出");
     }
 
     /// <summary>
@@ -46,42 +48,47 @@ public class AccountController : ControllerBase
     [Microsoft.AspNetCore.Authorization.Authorize]
     public async Task<ResponseResult<UserInfoResult>> Me()
     {
-        return await _accountService.GetCurrentUserAsync(User);
+        var data = await _accountService.GetCurrentUserAsync(User);
+        return ResponseResult<UserInfoResult>.Success(data);
     }
 
     /// <summary>
     /// 发送邮箱验证码
     /// </summary>
     [HttpPost("send-code")]
-    public async Task<ResponseResult<bool>> SendCode([FromBody] SendCodeModel model)
+    public async Task<StatusResponseResult> SendCode([FromBody] SendCodeModel model)
     {
-        return await _accountService.SendCodeAsync(model.Email);
+        await _accountService.SendCodeAsync(model.Email);
+        return StatusResponseResult.Success("验证码已发送");
     }
 
     /// <summary>
     /// 注册新用户
     /// </summary>
     [HttpPost("register")]
-    public async Task<ResponseResult<bool>> Register([FromBody] RegisterModel model)
+    public async Task<StatusResponseResult> Register([FromBody] RegisterModel model)
     {
-        return await _accountService.RegisterAsync(model);
+        await _accountService.RegisterAsync(model);
+        return StatusResponseResult.Success("注册成功");
     }
 
     /// <summary>
     /// 发送重置密码验证码
     /// </summary>
     [HttpPost("send-reset-code")]
-    public async Task<ResponseResult<bool>> SendResetCode([FromBody] SendCodeModel model)
+    public async Task<StatusResponseResult> SendResetCode([FromBody] SendCodeModel model)
     {
-        return await _accountService.SendResetCodeAsync(model.Email);
+        await _accountService.SendResetCodeAsync(model.Email);
+        return StatusResponseResult.Success("验证码已发送");
     }
 
     /// <summary>
     /// 重置密码（忘记密码）
     /// </summary>
     [HttpPost("reset-password")]
-    public async Task<ResponseResult<bool>> ResetPassword([FromBody] ResetPasswordModel model)
+    public async Task<StatusResponseResult> ResetPassword([FromBody] ResetPasswordModel model)
     {
-        return await _accountService.ResetPasswordAsync(model);
+        await _accountService.ResetPasswordAsync(model);
+        return StatusResponseResult.Success("密码已重置");
     }
 }
