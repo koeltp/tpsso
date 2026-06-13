@@ -4,6 +4,7 @@ using OpenIddict.Abstractions;
 using TPSSO.Domain.Entities;
 using TPSSO.Infrastructure.Data;
 using TPSSO.Infrastructure.Utils;
+using Microsoft.Extensions.Logging;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace TPSSO.Infrastructure.Seeding;
@@ -15,23 +16,28 @@ public class ClientSeeder
     private readonly IOpenIddictScopeManager _scopeManager;
     private readonly UserManager<User> _userManager;
     private readonly RoleManager<Role> _roleManager;
+    private readonly ILogger<ClientSeeder> _logger;
 
     public ClientSeeder(
         ApplicationDbContext context,
         IOpenIddictApplicationManager manager,
         IOpenIddictScopeManager scopeManager,
         UserManager<User> userManager,
-        RoleManager<Role> roleManager)
+        RoleManager<Role> roleManager,
+        ILogger<ClientSeeder> logger)
     {
         _context = context;
         _manager = manager;
         _scopeManager = scopeManager;
         _userManager = userManager;
         _roleManager = roleManager;
+        _logger = logger;
     }
 
     public async Task SeedAsync()
     {
+        _logger.LogInformation("===== 开始执行种子数据初始化 =====");
+
         if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
         {
             await _context.Database.EnsureDeletedAsync();
@@ -39,7 +45,9 @@ public class ClientSeeder
         }
         else
         {
+            _logger.LogInformation("生产环境：执行数据库迁移...");
             await _context.Database.MigrateAsync();
+            _logger.LogInformation("数据库迁移完成");
         }
 
         // ──────── Scopes ────────
@@ -150,7 +158,9 @@ public class ClientSeeder
         // ──────── OAuth 客户端 ────────
 
         // 字典配置种子数据
+        _logger.LogInformation("开始写入字典配置种子数据...");
         await SeedDictAsync();
+        _logger.LogInformation("字典配置种子数据写入完成");
 
         // 管理后台（tpssoadmin）
         if (await _manager.FindByClientIdAsync(SystemClientIds.AdminClient) == null)
@@ -202,54 +212,7 @@ public class ClientSeeder
             }
         }
 
-        // 用户门户（tpssoportal）
-        if (await _manager.FindByClientIdAsync(SystemClientIds.PortalClient) == null)
-        {
-            var openIddictApp = await _manager.CreateAsync(new OpenIddictApplicationDescriptor
-            {
-                ClientId = SystemClientIds.PortalClient,
-                ConsentType = ConsentTypes.Implicit,
-                DisplayName = "TPSSO 用户门户",
-                RedirectUris = { new Uri("http://localhost:3011/callback") },
-                PostLogoutRedirectUris = { new Uri("http://localhost:3011") },
-                Permissions =
-                {
-                    Permissions.Endpoints.Authorization,
-                    Permissions.Endpoints.Token,
-                    Permissions.Endpoints.EndSession,
-                    Permissions.ResponseTypes.Code,
-                    Permissions.GrantTypes.AuthorizationCode,
-                    Permissions.Scopes.Email,
-                    Permissions.Scopes.Profile,
-                    Permissions.Scopes.Roles
-                }
-            });
-
-            var openIddictId = (string?)openIddictApp.GetType().GetProperty("Id")?.GetValue(openIddictApp);
-            if (!await _context.ClientApplications.AnyAsync(c => c.ClientId == SystemClientIds.PortalClient))
-            {
-                var creator = await _userManager.FindByEmailAsync(adminEmail);
-                _context.ClientApplications.Add(new ClientApplication
-                {
-                    ClientId = SystemClientIds.PortalClient,
-                    OpenIddictApplicationId = openIddictId,
-                    Name = "TPSSO 用户门户",
-                    Description = "TPSSO 用户自助服务门户",
-                    IsPublic = true,
-                    Status = ClientStatus.Approved,
-                    CreatedByUserId = creator?.Id ?? Guid.Empty,
-                    ReviewedByUserId = creator?.Id ?? Guid.Empty,
-                    ReviewedAt = DateTime.UtcNow,
-                    RedirectUris = [new ClientRedirectUri { Uri = "http://localhost:3011/callback" }],
-                    AllowedScopes = [
-                        new ClientScope { Scope = "email" },
-                        new ClientScope { Scope = "profile" },
-                        new ClientScope { Scope = "roles" }
-                    ]
-                });
-                await _context.SaveChangesAsync();
-            }
-        }
+        _logger.LogInformation("===== 种子数据初始化完成 =====");
     }
 
     // ──────── 字典配置种子数据 ────────
@@ -287,9 +250,9 @@ public class ClientSeeder
                 ParentId = oauthType.Id,
                 Items =
                 [
-                    new DictItem { Key = "ClientId", Value = "", Description = "GitHub OAuth Client ID", Sort = 1 },
+                    new DictItem { Key = "ClientId", Value = "Ov23lietsdCwxFEgi6Ky", Description = "GitHub OAuth Client ID", Sort = 1 },
                     new DictItem { Key = "ClientSecret", Value = "", Description = "GitHub OAuth Client Secret", IsSensitive = true, Sort = 2 },
-                    new DictItem { Key = "CallbackUrl", Value = "", Description = "GitHub OAuth 回调地址", Sort = 3 },
+                    new DictItem { Key = "IsEnabled", Value = "true", Description = "是否启用 GitHub 登录", Sort = 3 },
                 ]
             },
             new()
@@ -300,7 +263,7 @@ public class ClientSeeder
                 [
                     new DictItem { Key = "ClientId", Value = "", Description = "Google OAuth Client ID", Sort = 1 },
                     new DictItem { Key = "ClientSecret", Value = "", Description = "Google OAuth Client Secret", IsSensitive = true, Sort = 2 },
-                    new DictItem { Key = "CallbackUrl", Value = "", Description = "Google OAuth 回调地址", Sort = 3 },
+                    new DictItem { Key = "IsEnabled", Value = "false", Description = "是否启用 Google 登录", Sort = 3 },
                 ]
             },
             new()
@@ -311,7 +274,7 @@ public class ClientSeeder
                 [
                     new DictItem { Key = "AppId", Value = "", Description = "微信 App ID", Sort = 1 },
                     new DictItem { Key = "AppSecret", Value = "", Description = "微信 App Secret", IsSensitive = true, Sort = 2 },
-                    new DictItem { Key = "CallbackUrl", Value = "", Description = "微信回调地址", Sort = 3 },
+                    new DictItem { Key = "IsEnabled", Value = "false", Description = "是否启用微信登录", Sort = 3 },
                 ]
             },
             new()

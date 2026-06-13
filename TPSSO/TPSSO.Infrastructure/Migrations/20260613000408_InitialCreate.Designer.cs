@@ -12,7 +12,7 @@ using TPSSO.Infrastructure.Data;
 namespace TPSSO.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260610071905_InitialCreate")]
+    [Migration("20260613000408_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -637,12 +637,6 @@ namespace TPSSO.Infrastructure.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("RefreshToken")
-                        .HasColumnType("longtext");
-
-                    b.Property<DateTime?>("RefreshTokenExpiresAt")
-                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("longtext");

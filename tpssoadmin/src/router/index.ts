@@ -24,6 +24,11 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/docs/Architecture.vue')
       },
       {
+        path: 'external-login',
+        name: 'DocsExternalLogin',
+        component: () => import('@/views/docs/ExternalLogin.vue')
+      },
+      {
         path: 'deployment',
         name: 'DocsDeployment',
         component: () => import('@/views/docs/Deployment.vue')

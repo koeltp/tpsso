@@ -32,8 +32,24 @@ cd tpsso</pre>
 }</pre>
     </el-card>
 
-    <h2>4. 启动后端</h2>
-    <p>先启动 Auth 服务（首次启动会自动迁移数据库并写入种子数据）：</p>
+    <h2>4. 数据库迁移</h2>
+    <p>首次启动 Auth 服务会自动迁移，但开发中修改实体后需要手动生成迁移：</p>
+    <el-card shadow="never" class="code-card">
+      <pre># 生成迁移（在 TPSSO/ 目录下执行）
+dotnet ef migrations add 迁移名称 --project TPSSO.Infrastructure --startup-project Auth --context ApplicationDbContext
+
+# 更新数据库
+dotnet ef database update --project TPSSO.Infrastructure --startup-project Auth --context ApplicationDbContext
+
+# 删除最近一次迁移（未应用到数据库时）
+dotnet ef migrations remove --project TPSSO.Infrastructure --startup-project Auth --context ApplicationDbContext
+
+# 重置数据库（删除后重新创建，会丢失所有数据）
+dotnet ef database drop --force --project TPSSO.Infrastructure --startup-project Auth --context ApplicationDbContext</pre>
+    </el-card>
+
+    <h2>5. 启动后端</h2>
+    <p>先启动 Auth 服务：</p>
     <el-card shadow="never" class="code-card">
       <pre>cd TPSSO/Auth
 dotnet run --launch-profile https        # https://localhost:7044</pre>
@@ -44,7 +60,7 @@ dotnet run --launch-profile https        # https://localhost:7044</pre>
 dotnet run --launch-profile https        # https://localhost:7045</pre>
     </el-card>
 
-    <h2>5. 启动前端</h2>
+    <h2>6. 启动前端</h2>
     <el-card shadow="never" class="code-card">
       <pre># 认证前端
 cd tpssoauth
@@ -55,7 +71,7 @@ cd tpssoadmin
 npm install && npm run dev               # http://localhost:3009</pre>
     </el-card>
 
-    <h2>6. 开发账号</h2>
+    <h2>7. 开发账号</h2>
     <el-table :data="accounts" stripe border size="small">
       <el-table-column prop="email" label="邮箱" width="200" />
       <el-table-column prop="password" label="密码" width="140" />

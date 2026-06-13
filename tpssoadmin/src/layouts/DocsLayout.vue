@@ -31,6 +31,10 @@
             <el-icon><Grid /></el-icon>
             <span>架构设计</span>
           </el-menu-item>
+          <el-menu-item index="/docs/external-login">
+            <el-icon><User /></el-icon>
+            <span>第三方登录</span>
+          </el-menu-item>
           <el-menu-item index="/docs/deployment">
             <el-icon><Upload /></el-icon>
             <span>部署运维</span>
@@ -55,7 +59,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Flag, Grid, Upload, Document, Connection } from '@element-plus/icons-vue'
+import { Flag, Grid, Upload, Document, Connection, User } from '@element-plus/icons-vue'
 import { startOAuthLogin } from '@/utils/oauth'
 import { useUserStore } from '@/stores/user'
 import logoSrc from '@/assets/logo-icon.png'

@@ -29,6 +29,12 @@ export default defineConfig(({ mode }) => {
           target: env.VITE_API_TARGET,
           changeOrigin: true,
           secure: false
+        },
+        // 第三方登录回调路径（如 /signin-github）
+        '/signin-': {
+          target: env.VITE_API_TARGET,
+          changeOrigin: true,
+          secure: false
         }
       }
     }

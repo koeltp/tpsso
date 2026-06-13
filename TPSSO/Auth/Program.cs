@@ -10,6 +10,8 @@ using TPSSO.Infrastructure.Services;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
+using TPSSO.Auth.Extensions;
+using TPSSO.Auth.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -55,8 +57,11 @@ builder.Services.ConfigureApplicationCookie(options =>
     // options.Cookie.Domain = ".taipi.top";
     options.Cookie.SameSite=SameSiteMode.Lax;
     options.Cookie.SecurePolicy=CookieSecurePolicy.Always;
-
 });
+
+// 2.5 第三方 OAuth 登录配置
+// 所有 Provider 的 Handler 无条件注册，ClientId/ClientSecret 从数据库字典动态读取
+builder.Services.AddAuthentication().AddExternalLogins();
 
 // 3. OpenIddict 完整配置（Server + Core + Validation）
 builder.Services.AddOpenIddict()
@@ -136,6 +141,10 @@ builder.Services.AddScoped<IConfigService, ConfigService>();
 builder.Services.AddScoped<ClientSeeder>();
 
 var app = builder.Build();
+
+// 全局异常处理，放在最前面确保所有请求都被拦截
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,

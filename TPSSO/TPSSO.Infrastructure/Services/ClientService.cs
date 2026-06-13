@@ -240,7 +240,7 @@ public class ClientService : IClientService
             return ResponseResult<bool>.NotFound("客户端不存在");
 
         // 系统内置客户端禁止删除
-        if (client.ClientId == SystemClientIds.AdminClient || client.ClientId == SystemClientIds.PortalClient)
+        if (client.ClientId == SystemClientIds.AdminClient)
             return ResponseResult<bool>.BadRequest("系统内置客户端，禁止删除");
 
         if (client.CreatedByUserId != userId)

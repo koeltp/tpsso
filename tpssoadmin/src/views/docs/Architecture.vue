@@ -56,6 +56,20 @@
 7. 后续请求带 Bearer Token</pre>
     </el-card>
 
+    <h3>第三方登录流程（GitHub / Google / 微信）</h3>
+    <el-card shadow="never" class="code-card">
+      <pre>1. 前端调用 GET /api/external-login/providers 获取已启用 Provider 列表
+2. 用户点击第三方登录按钮 → 整页跳转 GET /api/external-login/{provider}
+3. 后端 Challenge → 302 重定向到第三方授权页
+4. 用户授权 → 第三方回调 /signin-{provider}
+5. ASP.NET Core 自动处理 → 重定向到 /api/external-login/callback
+6. 统一回调处理：
+   a. UserLogins 表匹配 → 直接登录
+   b. 邮箱匹配已有用户 → 自动关联 + 登录
+   c. 无匹配 → 自动创建用户 + 关联 + 登录
+7. 签发 Cookie → 继续原有 OAuth 授权流程</pre>
+    </el-card>
+
     <h2>后端分层架构</h2>
     <el-card shadow="never" class="code-card">
       <pre>Auth/Admin (API 层)           → Controller：HTTP 请求处理
@@ -134,11 +148,9 @@ const clientDesign = [
 ]
 
 const dictCategories = [
-  { code: 'ThirdPartyLogin', name: '第三方登录', items: 'GitHub ClientId/ClientSecret/CallbackUrl' },
-  { code: 'SmtpServer', name: 'SMTP 配置', items: 'Host/Port/Username/Password/SenderEmail/SenderName/UseSsl' },
-  { code: 'Security', name: '安全配置', items: 'AccessTokenExpireMinutes/RefreshTokenExpireDays' },
-  { code: 'PasswordPolicy', name: '密码策略', items: 'MinLength/RequireUppercase/Lowercase/Digit/NonAlphanumeric' },
-  { code: 'Upload', name: '上传配置', items: 'MaxAvatarSizeKB/AllowedAvatarTypes' },
-  { code: 'System', name: '系统配置', items: 'SiteName/AllowRegistration' }
+  { code: 'OAuth', name: '第三方登录', items: 'GitHub/Google/WeChat 各含 ClientId/ClientSecret/IsEnabled' },
+  { code: 'Security', name: '安全配置', items: 'JWT: AccessTokenExpireMinutes/RefreshTokenExpireDays; 密码策略: MinLength/RequireUppercase/Lowercase/Digit/NonAlphanumeric' },
+  { code: 'System', name: '系统配置', items: 'Upload: MaxAvatarSizeKB/AllowedAvatarTypes; General: SiteName/AllowRegistration/VerificationCodeExpireMinutes' },
+  { code: 'Smtp', name: '邮件配置', items: 'Host/Port/UseSsl/Username/Password/SenderName/SenderEmail' }
 ]
 </script>

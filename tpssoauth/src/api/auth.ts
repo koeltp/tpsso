@@ -66,3 +66,29 @@ export const sendResetCode = (data: SendCodeRequest): Promise<boolean> => {
 export const resetPassword = (data: ResetPasswordRequest): Promise<boolean> => {
   return api.post('/api/account/reset-password', data)
 }
+
+// ──────── 第三方登录 ────────
+
+export interface ExternalProvider {
+  scheme: string    // GitHub / Google / WeChat
+  displayName: string  // GitHub / Google / 微信
+}
+
+/** 获取已启用的第三方登录 Provider 列表 */
+export const getExternalProviders = (): Promise<ExternalProvider[]> => {
+  return api.get('/api/external-login/providers')
+}
+
+/**
+ * 发起第三方登录
+ * 后端会 302 重定向到第三方授权页，所以需要整页跳转
+ */
+export const externalLogin = (provider: string, returnUrl?: string) => {
+  const params = new URLSearchParams()
+  if (returnUrl) {
+    params.set('returnUrl', returnUrl)
+  }
+  const query = params.toString()
+  // 整页跳转到后端 Challenge 端点
+  window.location.href = `/api/external-login/${provider}${query ? '?' + query : ''}`
+}
