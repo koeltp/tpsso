@@ -7,7 +7,7 @@
  */
 
 const CLIENT_ID = import.meta.env.VITE_OAUTH_CLIENT_ID || 'tpsso_admin_client'
-const SCOPES = import.meta.env.VITE_OAUTH_SCOPE || 'openid profile email roles'
+const SCOPES = import.meta.env.VITE_OAUTH_SCOPE || 'openid profile email roles offline_access'
 const CODE_VERIFIER_KEY = 'admin_code_verifier'
 const REDIRECT_KEY = 'admin_redirect'
 // 在文件顶部添加

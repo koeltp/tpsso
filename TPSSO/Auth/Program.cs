@@ -25,7 +25,7 @@ try
     builder.Services.AddOpenIddictServer(builder.Configuration, builder.Environment);
     builder.Services.AddCorsPolicy();
     builder.Services.AddHealthCheckServices(builder.Configuration);
-    builder.Services.AddApplicationServices();
+    builder.Services.AddApplicationServices(builder.Environment);
     builder.Services.AddTaiPiExceptionHandling(options =>
     {
         options.UnauthorizedCode = AppCodes.SystemUnauthorized;
@@ -62,6 +62,13 @@ try
     {
         var seeder = scope.ServiceProvider.GetRequiredService<ClientSeeder>();
         await seeder.SeedAsync();
+
+        // 开发环境注册测试客户端
+        if (app.Environment.IsDevelopment())
+        {
+            var testSeeder = scope.ServiceProvider.GetRequiredService<TestClientSeeder>();
+            await testSeeder.SeedAsync();
+        }
 
         var startupLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
         await StartupConfigValidator.ValidateAsync(app.Services, startupLogger);

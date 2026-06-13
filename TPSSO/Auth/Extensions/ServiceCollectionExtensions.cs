@@ -91,15 +91,46 @@ public static class ServiceCollectionExtensions
             .AddServer(options =>
             {
                 var ssoOptions = configuration.GetSection(SsoOptions.SectionName).Get<SsoOptions>()!;
-                options.SetIssuer(ssoOptions.Issuer);
+                // 仅在显式配置时设置 Issuer，否则由 OpenIddict 自动从请求推断
+                if (!string.IsNullOrEmpty(ssoOptions.Issuer))
+                {
+                    options.SetIssuer(ssoOptions.Issuer);
+                }
+
+                // 端点
                 options.SetAuthorizationEndpointUris("/connect/authorize")
                        .SetTokenEndpointUris("/connect/token")
                        .SetUserInfoEndpointUris("/connect/userinfo")
-                       .SetEndSessionEndpointUris("/connect/logout");
+                       .SetEndSessionEndpointUris("/connect/logout")
+                       .SetIntrospectionEndpointUris("/connect/introspect")
+                       .SetRevocationEndpointUris("/connect/revoke")
+                       .SetDeviceAuthorizationEndpointUris("/connect/device")
+                       .SetEndUserVerificationEndpointUris("/connect/verify");
 
+                // 授权流程
                 options.AllowAuthorizationCodeFlow()
-                       .RequireProofKeyForCodeExchange();
+                       .RequireProofKeyForCodeExchange()
+                       .AllowRefreshTokenFlow()
+                       .AllowClientCredentialsFlow()
+                       .AllowDeviceAuthorizationFlow();
 
+                // Refresh Token 配置：滑动过期，7天无活动则过期
+                options.SetRefreshTokenLifetime(TimeSpan.FromDays(7));
+                options.SetAccessTokenLifetime(TimeSpan.FromHours(2));
+
+                // 禁用 Access Token 加密：Access Token 需要被资源服务器（Admin）通过 OIDC Discovery 离线验证
+                // 加密后资源服务器无法解密，只能走 Introspection 端点在线验证，增加延迟
+                options.DisableAccessTokenEncryption();
+
+                // 启用 JWT Access Token（自包含，资源服务器可离线验证）
+                options.UseAspNetCore()
+                       .EnableAuthorizationEndpointPassthrough()
+                       .EnableTokenEndpointPassthrough()
+                       .EnableUserInfoEndpointPassthrough()
+                       .EnableEndSessionEndpointPassthrough()
+                       .EnableEndUserVerificationEndpointPassthrough();
+
+                // 开发环境使用开发证书
                 if (environment.IsDevelopment())
                 {
                     options.AddDevelopmentEncryptionCertificate()
@@ -114,12 +145,9 @@ public static class ServiceCollectionExtensions
                            .AddSigningCertificate(signing);
                 }
 
-                options.DisableAccessTokenEncryption();
-                options.UseAspNetCore()
-                       .EnableAuthorizationEndpointPassthrough()
-                       .EnableTokenEndpointPassthrough()
-                       .EnableUserInfoEndpointPassthrough()
-                       .EnableEndSessionEndpointPassthrough();
+                // 启用 Access Token 加密（防内容泄露）
+                // 注意：启用后资源服务器需要配置解密密钥或使用 Introspection 端点
+                // options.DisableAccessTokenEncryption();
             })
             .AddValidation(options =>
             {
@@ -162,13 +190,20 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// 注册业务服务
     /// </summary>
-    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+    public static IServiceCollection AddApplicationServices(this IServiceCollection services, IHostEnvironment environment)
     {
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IVerificationCodeService, VerificationCodeService>();
         services.AddScoped<IConfigService, ConfigService>();
         services.AddScoped<ClientSeeder>();
+
+        // 仅开发环境注册测试客户端种子数据
+        if (environment.IsDevelopment())
+        {
+            services.AddScoped<TestClientSeeder>();
+        }
+
         return services;
     }
 }

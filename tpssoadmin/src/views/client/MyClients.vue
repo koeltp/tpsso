@@ -40,6 +40,12 @@
       <!-- 列表 -->
       <el-table :data="clients" v-loading="loading" stripe>
         <el-table-column type="index" label="序号" width="70" align="center" />
+        <el-table-column label="Logo" width="70" align="center">
+          <template #default="{ row }">
+            <el-avatar v-if="row.logo" :src="getFullUrl(row.logo)" :size="32" shape="square" />
+            <el-avatar v-else :size="32" shape="square" class="logo-placeholder">{{ row.name?.charAt(0) || '?' }}</el-avatar>
+          </template>
+        </el-table-column>
         <el-table-column prop="name" label="名称" min-width="140" />
         <el-table-column prop="clientId" label="Client ID" min-width="180">
           <template #default="{ row }"><code>{{ row.clientId }}</code></template>
@@ -55,7 +61,7 @@
         <el-table-column label="创建时间" width="170">
           <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" width="240" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" size="small" @click="viewDetail(row)">详情</el-button>
             <el-button v-if="row.status === 'Approved'" link type="primary" size="small" @click="viewUsers(row)">授权用户</el-button>
@@ -63,6 +69,7 @@
             <el-button v-if="row.status === 'Draft'" link type="warning" size="small" @click="handleSubmit(row.id)">提交审核</el-button>
             <el-button v-if="row.status === 'Pending'" link type="info" size="small" @click="handleWithdraw(row.id)">撤回</el-button>
             <el-button v-if="row.status === 'Rejected'" link type="primary" size="small" @click="openEditDialog(row)">编辑</el-button>
+            <el-button v-if="row.status === 'Rejected'" link type="warning" size="small" @click="handleSubmit(row.id)">重新提交</el-button>
             <el-button v-if="row.status !== 'Approved'" link type="danger" size="small" @click="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
@@ -79,6 +86,24 @@
     <!-- 新增/编辑弹窗 -->
     <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑客户端' : '新增客户端'" width="600px" destroy-on-close @closed="resetForm">
       <el-form :model="clientForm" :rules="formRules" ref="formRef" label-width="100px">
+        <el-form-item label="应用Logo">
+          <div class="logo-upload-area">
+            <el-upload
+              class="logo-uploader"
+              :show-file-list="false"
+              :before-upload="beforeLogoUpload"
+              :http-request="handleLogoUpload"
+              accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
+            >
+              <el-avatar v-if="clientForm.logo" :src="getFullUrl(clientForm.logo)" :size="64" shape="square" />
+              <div v-else class="logo-upload-placeholder">
+                <el-icon :size="24"><Plus /></el-icon>
+                <span>上传Logo</span>
+              </div>
+            </el-upload>
+            <el-button v-if="clientForm.logo" link type="danger" size="small" @click="clientForm.logo = ''">移除</el-button>
+          </div>
+        </el-form-item>
         <el-form-item label="应用名称" prop="name">
           <el-input v-model="clientForm.name" placeholder="请输入应用名称" />
         </el-form-item>
@@ -103,6 +128,22 @@
             <el-checkbox label="roles" value="roles" />
           </el-checkbox-group>
         </el-form-item>
+        <el-form-item label="授权类型">
+          <el-checkbox-group v-model="selectedGrantTypes">
+            <el-checkbox label="授权码模式" value="authorization_code" />
+            <el-checkbox label="刷新令牌" value="refresh_token" />
+            <el-checkbox label="客户端凭证" value="client_credentials" />
+            <el-checkbox label="设备码" value="device_code" />
+          </el-checkbox-group>
+          <div class="form-tip">授权码模式为标准 OAuth2 流程；客户端凭证适用于 M2M 场景；设备码适用于 IoT 设备</div>
+        </el-form-item>
+        <el-form-item label="确认类型">
+          <el-radio-group v-model="clientForm.consentType">
+            <el-radio value="explicit">需用户确认</el-radio>
+            <el-radio value="implicit">自动确认</el-radio>
+          </el-radio-group>
+          <div class="form-tip">选择"需用户确认"时，用户首次授权会看到确认页面；选择"自动确认"则跳过确认</div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -113,6 +154,10 @@
     <!-- 详情弹窗 -->
     <el-dialog v-model="detailVisible" title="客户端详情" width="600px">
       <el-descriptions :column="1" border v-if="detailData">
+        <el-descriptions-item label="Logo">
+          <el-avatar v-if="detailData.logo" :src="getFullUrl(detailData.logo)" :size="48" shape="square" />
+          <span v-else class="text-muted">未设置</span>
+        </el-descriptions-item>
         <el-descriptions-item label="应用名称">{{ detailData.name }}</el-descriptions-item>
         <el-descriptions-item label="Client ID"><code>{{ detailData.clientId }}</code></el-descriptions-item>
         <el-descriptions-item v-if="!detailData.isPublic && detailData.status === 'Approved'" label="Client Secret">
@@ -136,7 +181,13 @@
         <el-descriptions-item label="回调地址">
           <div v-for="uri in detailData.redirectUris.split('\n')" :key="uri" class="redirect-uri">{{ uri }}</div>
         </el-descriptions-item>
-        <el-descriptions-item label="授权范围">{{ detailData.allowedScopes }}</el-descriptions-item>
+        <el-descriptions-item label="授权范围">
+          <el-tag v-for="scope in detailData.allowedScopes.split(' ')" :key="scope" size="small" class="grant-type-tag">{{ grantTypeLabel(scope) }}</el-tag>
+          </el-descriptions-item>
+        <el-descriptions-item label="授权类型">
+          <el-tag v-for="gt in detailData.grantTypes.split(' ')" :key="gt" size="small" class="grant-type-tag">{{ grantTypeLabel(gt) }}</el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="确认类型">{{ detailData.consentType === 'implicit' ? '自动确认' : '需用户确认' }}</el-descriptions-item>
         <el-descriptions-item v-if="detailData.reviewRemark" label="审核备注">{{ detailData.reviewRemark }}</el-descriptions-item>
         <el-descriptions-item label="创建时间">{{ formatDate(detailData.createdAt) }}</el-descriptions-item>
         <el-descriptions-item v-if="detailData.updatedAt" label="更新时间">{{ formatDate(detailData.updatedAt) }}</el-descriptions-item>
@@ -153,7 +204,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Plus, Download, CopyDocument,Refresh,Lock } from '@element-plus/icons-vue'
 import {
   searchMyClients, createClient, updateClient, deleteClient as deleteClientApi,
-  submitClient, withdrawClient, getClientById, regenerateClientSecret,
+  submitClient, withdrawClient, getClientById, regenerateClientSecret, uploadClientLogo,
   type ClientResult
 } from '@/api/client'
 import { statusTagType, statusLabel, formatDate } from '@/utils/client'
@@ -199,13 +250,30 @@ const formRef = ref<FormInstance>()
 const detailPlainSecret = ref('')
 
 const clientForm = reactive({
-  name: '', description: '', redirectUris: '', allowedScopes: 'openid profile email', isPublic: true, rowVersion: ''
+  name: '', description: '', logo: '', redirectUris: '', allowedScopes: 'openid profile email',
+  grantTypes: 'authorization_code refresh_token', isPublic: true, consentType: 'explicit', rowVersion: ''
 })
 
 const selectedScopes = computed({
   get: () => clientForm.allowedScopes.split(' ').filter(s => s),
   set: (val: string[]) => { clientForm.allowedScopes = val.join(' ') }
 })
+
+const selectedGrantTypes = computed({
+  get: () => clientForm.grantTypes.split(' ').filter(s => s),
+  set: (val: string[]) => { clientForm.grantTypes = val.join(' ') }
+})
+
+/** 授权类型中文标签 */
+const grantTypeLabel = (gt: string) => {
+  const map: Record<string, string> = {
+    authorization_code: '授权码模式',
+    refresh_token: '刷新令牌',
+    client_credentials: '客户端凭证',
+    device_code: '设备码'
+  }
+  return map[gt] || gt
+}
 
 /** 验证回调地址：每行必须是合法的 http/https URL */
 const validateRedirectUris = (_rule: any, value: string, callback: any) => {
@@ -234,8 +302,11 @@ const openEditDialog = async (row: ClientResult) => {
   const detail = await getClientById(row.id)
   Object.assign(clientForm, {
     name: detail.name, description: detail.description || '',
+    logo: detail.logo || '',
     redirectUris: detail.redirectUris, allowedScopes: detail.allowedScopes,
-    isPublic: detail.isPublic, rowVersion: detail.rowVersion || ''
+    grantTypes: detail.grantTypes || 'authorization_code refresh_token',
+    isPublic: detail.isPublic, consentType: detail.consentType || 'explicit',
+    rowVersion: detail.rowVersion || ''
   })
   dialogVisible.value = true
 }
@@ -250,16 +321,29 @@ const submitForm = async () => {
     if (isEdit.value) {
       await updateClient(editId.value, {
         name: clientForm.name, description: clientForm.description || undefined,
+        logo: clientForm.logo || undefined,
         redirectUris: clientForm.redirectUris, allowedScopes: clientForm.allowedScopes,
+        grantTypes: clientForm.grantTypes, consentType: clientForm.consentType,
         rowVersion: clientForm.rowVersion || undefined
       })
+      // 编辑模式下如果有新 Logo 文件则上传
+      if (pendingLogoFile.value) {
+        await uploadClientLogo(editId.value, pendingLogoFile.value)
+        pendingLogoFile.value = null
+      }
       ElMessage.success('更新成功')
     } else {
-      await createClient({
+      const created = await createClient({
         name: clientForm.name, description: clientForm.description || undefined,
         redirectUris: clientForm.redirectUris, allowedScopes: clientForm.allowedScopes,
-        isPublic: clientForm.isPublic
+        grantTypes: clientForm.grantTypes, isPublic: clientForm.isPublic,
+        consentType: clientForm.consentType
       })
+      // 创建成功后上传 Logo
+      if (pendingLogoFile.value && created.id) {
+        await uploadClientLogo(created.id, pendingLogoFile.value)
+        pendingLogoFile.value = null
+      }
       ElMessage.success('创建成功')
     }
     dialogVisible.value = false
@@ -271,10 +355,53 @@ const submitForm = async () => {
   }
 }
 
+/** 拼接完整 URL（Logo 可能是相对路径） */
+const getFullUrl = (url: string) => {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  // 相对路径拼接 Admin API 基地址
+  const base = import.meta.env.VITE_API_BASE_URL || ''
+  return base + url
+}
+
+/** Logo 上传前校验 */
+const beforeLogoUpload = (file: File) => {
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
+  if (!allowedTypes.includes(file.type)) {
+    ElMessage.error('仅支持 JPG、PNG、GIF、WebP、SVG 格式')
+    return false
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    ElMessage.error('Logo 文件大小不能超过 2MB')
+    return false
+  }
+  return true
+}
+
+/** 自定义 Logo 上传请求 */
+const handleLogoUpload = async (options: any) => {
+  // 新增时还没有 id，先保存文件，创建后上传
+  if (!isEdit.value && !editId.value) {
+    pendingLogoFile.value = options.file
+    clientForm.logo = URL.createObjectURL(options.file)
+    return
+  }
+  try {
+    const url = await uploadClientLogo(editId.value, options.file)
+    clientForm.logo = url
+    ElMessage.success('Logo 上传成功')
+  } catch {
+    // 拦截器已处理
+  }
+}
+
+const pendingLogoFile = ref<File | null>(null)
+
 const resetForm = () => {
-  clientForm.name = ''; clientForm.description = ''; clientForm.redirectUris = ''
-  clientForm.allowedScopes = 'openid profile email'; clientForm.isPublic = true; clientForm.rowVersion = ''
-  detailPlainSecret.value = ''
+  clientForm.name = ''; clientForm.description = ''; clientForm.logo = ''; clientForm.redirectUris = ''
+  clientForm.allowedScopes = 'openid profile email'; clientForm.grantTypes = 'authorization_code refresh_token'
+  clientForm.isPublic = true; clientForm.consentType = 'explicit'; clientForm.rowVersion = ''
+  detailPlainSecret.value = ''; pendingLogoFile.value = null
 }
 
 /** 复制文本到剪贴板 */
@@ -399,4 +526,21 @@ code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; font-size: 13p
 .secret-area code { color: #e6a23c; font-weight: 600; }
 
 .redirect-uri { padding: 2px 0; }
+
+.form-tip { font-size: 12px; color: #909399; line-height: 1.4; margin-top: 4px; }
+
+.grant-type-tag { margin-right: 4px; }
+
+.logo-placeholder { background: #e6f7ff; color: #1890ff; font-size: 14px; font-weight: 600; }
+
+.logo-upload-area { display: flex; align-items: flex-end; gap: 8px; }
+
+.logo-upload-placeholder {
+  width: 64px; height: 64px; border: 1px dashed #d9d9d9; border-radius: 8px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: #999; font-size: 12px; cursor: pointer; transition: border-color 0.2s;
+}
+.logo-upload-placeholder:hover { border-color: #1890ff; color: #1890ff; }
+
+.text-muted { color: #c0c4cc; }
 </style>

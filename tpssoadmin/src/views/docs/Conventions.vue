@@ -132,7 +132,7 @@ const adminEnvVars = [
   { var: 'VITE_API_TARGET', dev: 'https://localhost:7045', prod: '不配置' },
   { var: 'VITE_SSO_URL', dev: 'http://localhost:3010', prod: 'https://auth.taipi.top' },
   { var: 'VITE_OAUTH_CLIENT_ID', dev: 'tpsso_admin_client', prod: 'tpsso_admin_client' },
-  { var: 'VITE_OAUTH_SCOPE', dev: 'openid profile email roles', prod: 'openid profile email roles' }
+  { var: 'VITE_OAUTH_SCOPE', dev: 'openid profile email roles offline_access', prod: 'openid profile email roles offline_access' }
 ]
 
 const codeStyle = [

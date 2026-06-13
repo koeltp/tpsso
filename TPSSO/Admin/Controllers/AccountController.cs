@@ -85,7 +85,7 @@ public class AccountController : ControllerBase
 
         var avatarUrl = $"/avatars/{newFileName}";
         await _accountService.UpdateAvatarUrlAsync(User, avatarUrl);
-        return StatusResponseResult.Success("上传成功");
+        return new ResponseResult<string>(avatarUrl);
     }
 
     /// <summary>

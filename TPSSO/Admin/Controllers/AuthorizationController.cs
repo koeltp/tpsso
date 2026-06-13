@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -40,16 +41,49 @@ public class AuthorizationController : ControllerBase
                   && auth.Type == OpenIddictConstants.AuthorizationTypes.Permanent
             join app in _context.Set<OpenIddictEntityFrameworkCoreApplication>()
                 on auth.Application!.Id! equals app.Id!
-            select new MyAuthorizationResult
+            select new
             {
-                Id = auth.Id!,
+                auth.Id,
                 ClientName = app.DisplayName ?? app.ClientId!,
-                Scopes = auth.Scopes ?? "openid",
-                CreatedAt = auth.CreationDate!.Value
+                ScopesRaw = auth.Scopes ?? "",
+                auth.CreationDate
             }
         ).ToListAsync();
 
-        return new ResponseResult<List<MyAuthorizationResult>>(authorizations);
+        var results = authorizations.Select(a => new MyAuthorizationResult
+        {
+            Id = a.Id!,
+            ClientName = a.ClientName,
+            Scopes = ParseScopes(a.ScopesRaw),
+            CreatedAt = a.CreationDate
+        }).ToList();
+
+        return new ResponseResult<List<MyAuthorizationResult>>(results);
+    }
+
+    /// <summary>
+    /// 解析 OpenIddict 存储的 Scopes（JSON 数组格式如 ["openid","profile"]）
+    /// </summary>
+    private static string ParseScopes(string scopesRaw)
+    {
+        if (string.IsNullOrWhiteSpace(scopesRaw))
+            return "openid";
+
+        // OpenIddict 以 JSON 数组格式存储 Scopes
+        if (scopesRaw.StartsWith('['))
+        {
+            try
+            {
+                var items = JsonSerializer.Deserialize<List<string>>(scopesRaw);
+                return items != null ? string.Join(" ", items) : scopesRaw;
+            }
+            catch
+            {
+                return scopesRaw;
+            }
+        }
+
+        return scopesRaw;
     }
 
     /// <summary>

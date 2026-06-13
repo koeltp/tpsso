@@ -57,4 +57,9 @@ public interface IClientService
     /// 重置客户端密钥（仅机密类型），返回新的明文 Secret
     /// </summary>
     Task<ClientCreatedResult> RegenerateSecretAsync(Guid id, Guid userId);
+
+    /// <summary>
+    /// 更新客户端 Logo
+    /// </summary>
+    Task UpdateLogoAsync(Guid id, Guid userId, string logoUrl);
 }

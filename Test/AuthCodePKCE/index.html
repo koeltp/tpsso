@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authorization Code + PKCE 测试</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f7fa; color: #333; padding: 20px; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 22px; margin-bottom: 16px; color: #1a1a2e; }
+    h2 { font-size: 16px; margin: 20px 0 10px; color: #444; border-bottom: 1px solid #eee; padding-bottom: 6px; }
+    .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; }
+    input, select { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+    input:focus { outline: none; border-color: #409eff; box-shadow: 0 0 0 2px rgba(64,158,255,0.2); }
+    button { padding: 10px 24px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+    .btn-primary { background: #409eff; color: white; }
+    .btn-primary:hover { background: #3a8ee6; }
+    .btn-danger { background: #f56c6c; color: white; }
+    .btn-danger:hover { background: #e6575a; }
+    .btn-success { background: #67c23a; color: white; }
+    .btn-success:hover { background: #5daf34; }
+    .btn-group { display: flex; gap: 8px; margin-top: 12px; }
+    pre { background: #1e1e2e; color: #cdd6f4; padding: 16px; border-radius: 6px; overflow-x: auto; font-size: 13px; line-height: 1.5; max-height: 400px; overflow-y: auto; }
+    .status { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+    .status-success { background: #f0f9eb; color: #67c23a; }
+    .status-error { background: #fef0f0; color: #f56c6c; }
+    .status-pending { background: #fdf6ec; color: #e6a23c; }
+    .token-section { margin-top: 12px; }
+    .token-section summary { cursor: pointer; font-weight: 500; color: #409eff; }
+    .user-info { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 14px; }
+    .user-info dt { color: #999; font-weight: 500; }
+    .user-info dd { color: #333; }
+    .log { font-size: 12px; color: #999; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Authorization Code + PKCE 测试</h1>
+
+    <div class="card">
+      <h2>配置</h2>
+      <div class="form-group">
+        <label>SSO 地址</label>
+        <input id="ssoUrl" value="http://localhost:3010" />
+      </div>
+      <div class="form-group">
+        <label>Client ID</label>
+        <input id="clientId" value="test_authcode_pkce" />
+      </div>
+      <div class="form-group">
+        <label>Redirect URI</label>
+        <input id="redirectUri" value="" />
+      </div>
+      <div class="form-group">
+        <label>Scope</label>
+        <input id="scope" value="openid profile email roles offline_access" />
+      </div>
+      <div class="form-group">
+        <label>当前状态</label>
+        <span id="authStatus" class="status status-pending">未认证</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>操作</h2>
+      <div class="btn-group">
+        <button class="btn-primary" onclick="startAuth()">发起授权</button>
+        <button class="btn-success" onclick="refreshToken()" id="btnRefresh" disabled>刷新 Token</button>
+        <button class="btn-danger" onclick="logout()" id="btnLogout" disabled>登出</button>
+        <button class="btn-danger" onclick="clearAll()">清除数据</button>
+      </div>
+      <div class="log" id="logArea"></div>
+    </div>
+
+    <div class="card" id="tokenCard" style="display:none">
+      <h2>Token 信息</h2>
+      <div class="token-section">
+        <details>
+          <summary>Access Token (JWT)</summary>
+          <pre id="accessToken"></pre>
+        </details>
+      </div>
+      <div class="token-section">
+        <details>
+          <summary>ID Token</summary>
+          <pre id="idToken"></pre>
+        </details>
+      </div>
+      <div class="token-section">
+        <details>
+          <summary>Refresh Token</summary>
+          <pre id="refreshTokenDisplay"></pre>
+        </details>
+      </div>
+    </div>
+
+    <div class="card" id="userInfoCard" style="display:none">
+      <h2>用户信息</h2>
+      <dl class="user-info" id="userInfo"></dl>
+    </div>
+  </div>
+
+  <script>
+    // ──────── PKCE 工具函数 ────────
+
+    /** 生成随机字符串 */
+    function randomString(length) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~'
+      const array = new Uint8Array(length)
+      crypto.getRandomValues(array)
+      return Array.from(array, b => chars[b % chars.length]).join('')
+    }
+
+    /** SHA256 哈希并 Base64url 编码 */
+    async function sha256Base64url(str) {
+      const encoded = new TextEncoder().encode(str)
+      const hash = await crypto.subtle.digest('SHA-256', encoded)
+      return btoa(String.fromCharCode(...new Uint8Array(hash)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    }
+
+    /** 生成 PKCE code_verifier 和 code_challenge */
+    async function generatePKCE() {
+      const verifier = randomString(64)
+      const challenge = await sha256Base64url(verifier)
+      return { verifier, challenge }
+    }
+
+    // ──────── 日志 ────────
+
+    function log(msg) {
+      const area = document.getElementById('logArea')
+      const time = new Date().toLocaleTimeString()
+      area.textContent = `[${time}] ${msg}\n` + area.textContent
+    }
+
+    // ──────── 初始化 ────────
+
+    // 自动设置 redirectUri 为当前页面地址
+    document.getElementById('redirectUri').value = window.location.origin + window.location.pathname
+
+    // 检查 URL 中是否有授权码
+    window.addEventListener('DOMContentLoaded', async () => {
+      const params = new URLSearchParams(window.location.search)
+      const code = params.get('code')
+      const error = params.get('error')
+
+      if (error) {
+        log(`授权失败: ${error} - ${params.get('error_description')}`)
+        updateStatus('error', '授权失败')
+        return
+      }
+
+      if (code) {
+        log(`收到授权码: ${code.substring(0, 20)}...`)
+        // 清除 URL 中的参数
+        window.history.replaceState({}, '', window.location.pathname)
+        await exchangeCode(code)
+      }
+    })
+
+    // ──────── 发起授权 ────────
+
+    async function startAuth() {
+      const ssoUrl = document.getElementById('ssoUrl').value
+      const clientId = document.getElementById('clientId').value
+      const redirectUri = document.getElementById('redirectUri').value
+      const scope = document.getElementById('scope').value
+
+      const { verifier, challenge } = await generatePKCE()
+      // 保存 code_verifier 到 sessionStorage
+      sessionStorage.setItem('pkce_verifier', verifier)
+      log(`生成 PKCE: verifier=${verifier.substring(0, 10)}..., challenge=${challenge.substring(0, 10)}...`)
+
+      const params = new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        response_type: 'code',
+        scope: scope,
+        code_challenge: challenge,
+        code_challenge_method: 'S256'
+      })
+
+      log(`跳转到 SSO 授权页面...`)
+      window.location.href = `${ssoUrl}/connect/authorize?${params.toString()}`
+    }
+
+    // ──────── 用授权码换 Token ────────
+
+    async function exchangeCode(code) {
+      const ssoUrl = document.getElementById('ssoUrl').value
+      const clientId = document.getElementById('clientId').value
+      const redirectUri = document.getElementById('redirectUri').value
+      const verifier = sessionStorage.getItem('pkce_verifier')
+
+      if (!verifier) {
+        log('错误: 找不到 code_verifier，请重新发起授权')
+        updateStatus('error', 'PKCE 丢失')
+        return
+      }
+
+      log('正在用授权码交换 Token...')
+
+      const params = new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: code,
+        redirect_uri: redirectUri,
+        client_id: clientId,
+        code_verifier: verifier
+      })
+
+      try {
+        const response = await fetch(`${ssoUrl}/connect/token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params.toString()
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          log(`Token 交换失败: ${data.error} - ${data.error_description}`)
+          updateStatus('error', '交换失败')
+          return
+        }
+
+        log('Token 交换成功!')
+        sessionStorage.setItem('access_token', data.access_token)
+        sessionStorage.setItem('id_token', data.id_token || '')
+        sessionStorage.setItem('refresh_token', data.refresh_token || '')
+        sessionStorage.removeItem('pkce_verifier')
+
+        displayTokens(data)
+        updateStatus('success', '已认证')
+        document.getElementById('btnRefresh').disabled = false
+        document.getElementById('btnLogout').disabled = false
+
+        // 解析 ID Token 获取用户信息
+        if (data.id_token) {
+          displayUserInfo(parseJwt(data.id_token))
+        } else if (data.access_token) {
+          // 尝试从 access_token 解析
+          displayUserInfo(parseJwt(data.access_token))
+        }
+      } catch (err) {
+        log(`请求异常: ${err.message}`)
+        updateStatus('error', '请求异常')
+      }
+    }
+
+    // ──────── 刷新 Token ────────
+
+    async function refreshToken() {
+      const ssoUrl = document.getElementById('ssoUrl').value
+      const clientId = document.getElementById('clientId').value
+      const refreshTokenValue = sessionStorage.getItem('refresh_token')
+
+      if (!refreshTokenValue) {
+        log('没有 Refresh Token，无法刷新')
+        return
+      }
+
+      log('正在刷新 Token...')
+
+      const params = new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: refreshTokenValue,
+        client_id: clientId
+      })
+
+      try {
+        const response = await fetch(`${ssoUrl}/connect/token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params.toString()
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          log(`刷新失败: ${data.error} - ${data.error_description}`)
+          return
+        }
+
+        log('Token 刷新成功!')
+        sessionStorage.setItem('access_token', data.access_token)
+        sessionStorage.setItem('id_token', data.id_token || '')
+        if (data.refresh_token) {
+          sessionStorage.setItem('refresh_token', data.refresh_token)
+        }
+
+        displayTokens(data)
+        if (data.id_token) {
+          displayUserInfo(parseJwt(data.id_token))
+        }
+      } catch (err) {
+        log(`刷新异常: ${err.message}`)
+      }
+    }
+
+    // ──────── 登出 ────────
+
+    function logout() {
+      const ssoUrl = document.getElementById('ssoUrl').value
+      const clientId = document.getElementById('clientId').value
+      const idToken = sessionStorage.getItem('id_token')
+      sessionStorage.removeItem('access_token')
+      sessionStorage.removeItem('id_token')
+      sessionStorage.removeItem('refresh_token')
+      log('已登出，跳转到 SSO 登出页面...')
+      // OIDC 标准做法：传递 client_id + id_token_hint + post_logout_redirect_uri
+      let logoutUrl = `${ssoUrl}/connect/logout?client_id=${encodeURIComponent(clientId)}&post_logout_redirect_uri=${encodeURIComponent(window.location.origin + '/')}`
+      if (idToken) {
+        logoutUrl += `&id_token_hint=${encodeURIComponent(idToken)}`
+      }
+      window.location.href = logoutUrl
+    }
+
+    // ──────── 清除数据 ────────
+
+    function clearAll() {
+      sessionStorage.clear()
+      document.getElementById('tokenCard').style.display = 'none'
+      document.getElementById('userInfoCard').style.display = 'none'
+      document.getElementById('btnRefresh').disabled = true
+      document.getElementById('btnLogout').disabled = true
+      updateStatus('pending', '未认证')
+      log('已清除所有数据')
+    }
+
+    // ──────── 工具函数 ────────
+
+    /** 解析 JWT */
+    function parseJwt(token) {
+      try {
+        const parts = token.split('.')
+        if (parts.length < 2) return null
+        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
+        return payload
+      } catch {
+        return null
+      }
+    }
+
+    /** 显示 Token 信息 */
+    function displayTokens(data) {
+      document.getElementById('tokenCard').style.display = 'block'
+
+      const accessTokenPayload = parseJwt(data.access_token)
+      document.getElementById('accessToken').textContent = JSON.stringify(accessTokenPayload, null, 2)
+
+      if (data.id_token) {
+        const idTokenPayload = parseJwt(data.id_token)
+        document.getElementById('idToken').textContent = JSON.stringify(idTokenPayload, null, 2)
+      }
+
+      document.getElementById('refreshTokenDisplay').textContent = data.refresh_token || '(无)'
+    }
+
+    /** 显示用户信息 */
+    function displayUserInfo(payload) {
+      if (!payload) return
+      document.getElementById('userInfoCard').style.display = 'block'
+
+      const fields = {
+        sub: '用户ID',
+        name: '姓名',
+        email: '邮箱',
+        role: '角色',
+        iss: '签发者',
+        aud: '受众',
+        exp: '过期时间',
+        iat: '签发时间'
+      }
+
+      const dl = document.getElementById('userInfo')
+      dl.innerHTML = ''
+      for (const [key, label] of Object.entries(fields)) {
+        if (payload[key] !== undefined) {
+          const dt = document.createElement('dt')
+          dt.textContent = label
+          const dd = document.createElement('dd')
+          let value = payload[key]
+          // 时间戳转换
+          if ((key === 'exp' || key === 'iat') && typeof value === 'number') {
+            value = new Date(value * 1000).toLocaleString()
+          }
+          if (Array.isArray(value)) {
+            value = value.join(', ')
+          }
+          dd.textContent = value
+          dl.appendChild(dt)
+          dl.appendChild(dd)
+        }
+      }
+    }
+
+    /** 更新状态标签 */
+    function updateStatus(type, text) {
+      const el = document.getElementById('authStatus')
+      el.className = `status status-${type}`
+      el.textContent = text
+    }
+  </script>
+</body>
+</html>

@@ -35,6 +35,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '授权确认' }
       },
       {
+        path: 'device-verify',
+        name: 'DeviceVerify',
+        component: () => import('@/views/DeviceVerify.vue'),
+        meta: { title: '设备授权' }
+      },
+      {
         path: ':pathMatch(.*)*',
         name: 'NotFound',
         component: () => import('@/views/NotFound.vue'),

@@ -46,12 +46,20 @@
       <!-- 表格区域 -->
       <el-table :data="clients" v-loading="loading" stripe>
         <el-table-column type="index" label="序号" width="70" align="center" />
+        <el-table-column label="Logo" width="70" align="center">
+          <template #default="{ row }">
+            <el-avatar v-if="row.logo" :src="getFullUrl(row.logo)" :size="32" shape="square" />
+            <el-avatar v-else :size="32" shape="square" class="logo-placeholder">{{ row.name?.charAt(0) || '?' }}</el-avatar>
+          </template>
+        </el-table-column>
         <el-table-column prop="name" label="应用名称" min-width="140" />
         <el-table-column prop="clientId" label="Client ID" min-width="180">
           <template #default="{ row }">
             <code>{{ row.clientId }}</code>
           </template>
         </el-table-column>
+        <el-table-column prop="description" label="应用描述" show-overflow-tooltip />
+        <el-table-column prop="reviewRemark" label="审核意见" show-overflow-tooltip />
         <el-table-column label="类型" width="90" align="center">
           <template #default="{ row }">
             {{ row.isPublic ? '公开' : '机密' }}
@@ -67,7 +75,7 @@
             {{ formatDate(row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" align="center" fixed="right">
+        <el-table-column label="操作" width="280" align="left" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link size="small" @click="handleDetail(row)">详情</el-button>
             <el-button v-if="row.status === 'Pending'" type="success" link size="small" @click="handleApprove(row.id)">通过</el-button>
@@ -96,6 +104,10 @@
     <el-dialog v-model="detailDialogVisible" title="客户端详情" width="600px">
       <template v-if="detail">
         <el-descriptions :column="1" border>
+          <el-descriptions-item label="Logo">
+            <el-avatar v-if="detail.logo" :src="getFullUrl(detail.logo)" :size="48" shape="square" />
+            <span v-else class="text-muted">未设置</span>
+          </el-descriptions-item>
           <el-descriptions-item label="应用名称">{{ detail.name }}</el-descriptions-item>
           <el-descriptions-item label="Client ID">
             <code>{{ detail.clientId }}</code>
@@ -109,6 +121,10 @@
             <div v-for="uri in detail.redirectUris.split('\n')" :key="uri" class="redirect-uri">{{ uri }}</div>
           </el-descriptions-item>
           <el-descriptions-item label="授权范围">{{ detail.allowedScopes }}</el-descriptions-item>
+          <el-descriptions-item label="授权类型">
+            <el-tag v-for="gt in (detail.grantTypes || '').split(' ').filter(Boolean)" :key="gt" size="small" class="grant-type-tag">{{ grantTypeLabel(gt) }}</el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item label="确认类型">{{ detail.consentType === 'implicit' ? '自动确认' : '需用户确认' }}</el-descriptions-item>
           <el-descriptions-item v-if="detail.reviewRemark" label="审核备注">{{ detail.reviewRemark }}</el-descriptions-item>
           <el-descriptions-item label="创建时间">{{ formatDate(detail.createdAt) }}</el-descriptions-item>
           <el-descriptions-item v-if="detail.updatedAt" label="更新时间">{{ formatDate(detail.updatedAt) }}</el-descriptions-item>
@@ -143,6 +159,17 @@ import {
 } from '@/api/client'
 import { statusTagType, statusLabel, formatDate } from '@/utils/client'
 import { useClientStore } from '@/stores/client'
+
+/** 授权类型中文标签 */
+const grantTypeLabel = (gt: string) => {
+  const map: Record<string, string> = {
+    authorization_code: '授权码模式',
+    refresh_token: '刷新令牌',
+    client_credentials: '客户端凭证',
+    device_code: '设备码'
+  }
+  return map[gt] || gt
+}
 
 const route = useRoute()
 const clientStore = useClientStore()
@@ -266,6 +293,14 @@ const handleDelete = async (id: string) => {
 }
 
 onMounted(fetchClients)
+
+/** 拼接完整 URL（Logo 可能是相对路径） */
+const getFullUrl = (url: string) => {
+  if (!url) return ''
+  if (url.startsWith('http')) return url
+  const base = import.meta.env.VITE_API_BASE_URL || ''
+  return base + url
+}
 </script>
 
 <style scoped>
@@ -320,6 +355,10 @@ code {
   padding: 2px 0;
 }
 
+.grant-type-tag {
+  margin-right: 4px;
+}
+
 .secret-area {
   display: flex;
   align-items: center;
@@ -330,4 +369,7 @@ code {
   color: #e6a23c;
   font-weight: 600;
 }
+
+.logo-placeholder { background: #e6f7ff; color: #1890ff; font-size: 14px; font-weight: 600; }
+.text-muted { color: #c0c4cc; }
 </style>

@@ -9,7 +9,9 @@ export interface ClientResult {
   logo?: string
   redirectUris: string
   allowedScopes: string
+  grantTypes: string
   isPublic: boolean
+  consentType: string
   status: string
   reviewRemark?: string
   rowVersion?: string
@@ -28,7 +30,9 @@ export interface CreateClientRequest {
   logo?: string
   redirectUris: string
   allowedScopes?: string
+  grantTypes?: string
   isPublic?: boolean
+  consentType?: string
 }
 
 export interface UpdateClientRequest {
@@ -37,6 +41,8 @@ export interface UpdateClientRequest {
   logo?: string
   redirectUris: string
   allowedScopes?: string
+  grantTypes?: string
+  consentType?: string
   rowVersion?: string
 }
 
@@ -126,6 +132,15 @@ export const regenerateClientSecret = (id: string): Promise<ClientCreatedResult>
   return api.post(`/api/client/${id}/regenerate-secret`)
 }
 
+/** 上传客户端 Logo */
+export const uploadClientLogo = (id: string, file: File): Promise<string> => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return api.post(`/api/client/${id}/logo`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
 /** 授权用户信息 */
 export interface AuthorizedUserResult {
   username: string
@@ -137,7 +152,7 @@ export interface AuthorizedUserResult {
 export interface AuthorizationResult {
   id: string
   clientName: string
-  scopes: string[]
+  scopes: string
   createdAt: string
 }
 

@@ -1,12 +1,14 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using OpenIddict.Abstractions;
 using Taipi.Core.RQRS;
 using Taipi.Core.Exceptions;
 using TPSSO.Application.Exceptions;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;
+using TPSSO.Application.Options;
 
 namespace TPSSO.Admin.Controllers;
 
@@ -15,10 +17,14 @@ namespace TPSSO.Admin.Controllers;
 public class ClientController : ControllerBase
 {
     private readonly IClientService _clientService;
+    private readonly IWebHostEnvironment _env;
+    private readonly UploadOptions _uploadOptions;
 
-    public ClientController(IClientService clientService)
+    public ClientController(IClientService clientService, IWebHostEnvironment env, IOptions<UploadOptions> uploadOptions)
     {
         _clientService = clientService;
+        _env = env;
+        _uploadOptions = uploadOptions.Value;
     }
 
     /// <summary>
@@ -148,6 +154,45 @@ public class ClientController : ControllerBase
         var userId = GetUserId();
         var data = await _clientService.RegenerateSecretAsync(id, userId);
         return new ResponseResult<ClientCreatedResult>(data) { Message = "密钥已重置" };
+    }
+
+    /// <summary>
+    /// 上传客户端 Logo
+    /// </summary>
+    [HttpPost("{id}/logo")]
+    [Authorize]
+    public async Task<ResponseResult<string>> UploadLogo(Guid id, IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            throw new BadRequestException(AppCodes.UploadEmpty, "请选择文件");
+
+        var allowedTypes = _uploadOptions.LogoAllowedTypes.Split(',');
+        if (!allowedTypes.Contains(file.ContentType))
+        {
+            var extensions = allowedTypes.Select(x => x.Split('/')[1]).ToArray();
+            throw new BadRequestException(AppCodes.UploadInvalidType, $"仅支持 {string.Join("、", extensions)} 格式");
+        }
+        if (file.Length > _uploadOptions.LogoMaxSizeMB * 1024 * 1024)
+            throw new BadRequestException(AppCodes.UploadTooLarge, $"文件大小不能超过 {_uploadOptions.LogoMaxSizeMB}MB");
+
+        var userId = GetUserId();
+        var ext = Path.GetExtension(file.FileName);
+        var newFileName = $"{id}_{Guid.NewGuid():N}{ext}";
+        var webRoot = _env.WebRootPath ?? Path.Combine(_env.ContentRootPath, "wwwroot");
+        var logoDir = Path.Combine(webRoot, "logos");
+
+        if (!Directory.Exists(logoDir))
+            Directory.CreateDirectory(logoDir);
+
+        var filePath = Path.Combine(logoDir, newFileName);
+        using (var fs = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(fs);
+        }
+
+        var logoUrl = $"/logos/{newFileName}";
+        await _clientService.UpdateLogoAsync(id, userId, logoUrl);
+        return new ResponseResult<string>(logoUrl) { Message = "Logo 上传成功" };
     }
 
     /// <summary>

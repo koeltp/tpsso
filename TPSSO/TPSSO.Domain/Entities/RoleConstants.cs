@@ -16,4 +16,13 @@ public static class SystemClientIds
 {
     /// <summary>管理后台客户端</summary>
     public const string AdminClient = "tpsso_admin_client";
+
+    /// <summary>测试客户端：Authorization Code + PKCE（SPA）</summary>
+    public const string TestAuthCodePKCE = "test_authcode_pkce";
+
+    /// <summary>测试客户端：Client Credentials（M2M 机密客户端）</summary>
+    public const string TestClientCredentials = "test_client_credentials";
+
+    /// <summary>测试客户端：Device Code（设备码授权）</summary>
+    public const string TestDeviceCode = "test_device_code";
 }

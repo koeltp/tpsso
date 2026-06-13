@@ -24,6 +24,12 @@ public class CreateClientModel
     /// <summary>允许的授权范围（空格分隔，默认 openid profile email）</summary>
     public string AllowedScopes { get; set; } = "openid profile email";
 
+    /// <summary>允许的授权类型（空格分隔，默认 authorization_code refresh_token）</summary>
+    public string GrantTypes { get; set; } = "authorization_code refresh_token";
+
     /// <summary>是否公开客户端（SPA/移动端）</summary>
     public bool IsPublic { get; set; } = true;
+
+    /// <summary>授权确认类型：explicit=每次需用户确认，implicit=自动确认</summary>
+    public string ConsentType { get; set; } = "explicit";
 }

@@ -14,11 +14,11 @@
         <el-table-column prop="clientName" label="应用名称" min-width="160" />
         <el-table-column label="授权范围" min-width="200">
           <template #default="{ row }">
-            <el-tag v-for="scope in row.scopes" :key="scope" size="small" style="margin-right: 4px">{{ scope }}</el-tag>
+            <el-tag v-for="scope in row.scopes.split(' ')" :key="scope" size="small" style="margin-right: 4px">{{ scope }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column label="授权时间" width="170">
-          <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
+          <template #default="{ row }">{{ row.createdAt ? formatDate(row.createdAt) : '-' }}</template>
         </el-table-column>
         <el-table-column label="操作" width="100" fixed="right">
           <template #default="{ row }">

@@ -13,7 +13,9 @@ public class ClientResult
     public string? Logo { get; set; }
     public string RedirectUris { get; set; } = string.Empty;
     public string AllowedScopes { get; set; } = string.Empty;
+    public string GrantTypes { get; set; } = string.Empty;
     public bool IsPublic { get; set; }
+    public string ConsentType { get; set; } = "explicit";
     public string Status { get; set; } = string.Empty;
     public string? ReviewRemark { get; set; }
     public DateTime CreatedAt { get; set; }

@@ -163,7 +163,37 @@ public class ClientSeeder
         _logger.LogInformation("字典配置种子数据写入完成");
 
         // 管理后台（tpssoadmin）
-        if (await _manager.FindByClientIdAsync(SystemClientIds.AdminClient) == null)
+        var adminExisting = await _manager.FindByClientIdAsync(SystemClientIds.AdminClient);
+        if (adminExisting != null)
+        {
+            // 已存在则更新配置，确保新增的权限和 URI 同步
+            await _manager.UpdateAsync(adminExisting, new OpenIddictApplicationDescriptor
+            {
+                ConsentType = ConsentTypes.Implicit,
+                DisplayName = "TPSSO 管理后台",
+                RedirectUris = { new Uri("http://localhost:3009/callback") },
+                PostLogoutRedirectUris = { new Uri("http://localhost:3009") },
+                Permissions =
+                {
+                    Permissions.Endpoints.Authorization,
+                    Permissions.Endpoints.Token,
+                    Permissions.Endpoints.EndSession,
+                    Permissions.Endpoints.Introspection,
+                    Permissions.Endpoints.Revocation,
+                    Permissions.Endpoints.DeviceAuthorization,
+                    Permissions.Prefixes.Endpoint + "end_user_verification",
+                    Permissions.ResponseTypes.Code,
+                    Permissions.GrantTypes.AuthorizationCode,
+                    Permissions.GrantTypes.RefreshToken,
+                    Permissions.Scopes.Email,
+                    Permissions.Scopes.Profile,
+                    Permissions.Scopes.Roles,
+                    "scp:offline_access"
+                }
+            });
+            _logger.LogInformation("管理后台客户端已更新");
+        }
+        else
         {
             var openIddictApp = await _manager.CreateAsync(new OpenIddictApplicationDescriptor
             {
@@ -177,16 +207,23 @@ public class ClientSeeder
                     Permissions.Endpoints.Authorization,
                     Permissions.Endpoints.Token,
                     Permissions.Endpoints.EndSession,
+                    Permissions.Endpoints.Introspection,
+                    Permissions.Endpoints.Revocation,
+                    Permissions.Endpoints.DeviceAuthorization,
+                    Permissions.Prefixes.Endpoint + "end_user_verification",
                     Permissions.ResponseTypes.Code,
                     Permissions.GrantTypes.AuthorizationCode,
+                    Permissions.GrantTypes.RefreshToken,
                     Permissions.Scopes.Email,
                     Permissions.Scopes.Profile,
-                    Permissions.Scopes.Roles
+                    Permissions.Scopes.Roles,
+                    "scp:offline_access"
                 }
             });
 
-            // 同步创建业务表记录，让管理页面能看到此客户端
             var openIddictId = (string?)openIddictApp.GetType().GetProperty("Id")?.GetValue(openIddictApp);
+
+            // 同步创建业务表记录，让管理页面能看到此客户端
             if (!await _context.ClientApplications.AnyAsync(c => c.ClientId == SystemClientIds.AdminClient))
             {
                 var creator = await _userManager.FindByEmailAsync(adminEmail);
@@ -197,6 +234,7 @@ public class ClientSeeder
                     Name = "TPSSO 管理后台",
                     Description = "TPSSO 后台管理系统",
                     IsPublic = true,
+                    ConsentType = "implicit",
                     Status = ClientStatus.Approved,
                     CreatedByUserId = creator?.Id ?? Guid.Empty,
                     ReviewedByUserId = creator?.Id ?? Guid.Empty,
@@ -205,7 +243,12 @@ public class ClientSeeder
                     AllowedScopes = [
                         new ClientScope { Scope = "email" },
                         new ClientScope { Scope = "profile" },
-                        new ClientScope { Scope = "roles" }
+                        new ClientScope { Scope = "roles" },
+                        new ClientScope { Scope = "offline_access" }
+                    ],
+                    GrantTypes = [
+                        new ClientGrantType { GrantType = "authorization_code" },
+                        new ClientGrantType { GrantType = "refresh_token" }
                     ]
                 });
                 await _context.SaveChangesAsync();
@@ -251,7 +294,7 @@ public class ClientSeeder
                 Items =
                 [
                     new DictItem { Key = "ClientId", Value = "Ov23lietsdCwxFEgi6Ky", Description = "GitHub OAuth Client ID", Sort = 1 },
-                    new DictItem { Key = "ClientSecret", Value = "", Description = "GitHub OAuth Client Secret", IsSensitive = true, Sort = 2 },
+                    new DictItem { Key = "ClientSecret", Value = "xxx", Description = "GitHub OAuth Client Secret", IsSensitive = true, Sort = 2 },
                     new DictItem { Key = "IsEnabled", Value = "true", Description = "是否启用 GitHub 登录", Sort = 3 },
                 ]
             },

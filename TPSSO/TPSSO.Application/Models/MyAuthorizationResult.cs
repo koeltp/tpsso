@@ -8,5 +8,5 @@ public class MyAuthorizationResult
     public string Id { get; set; } = string.Empty;
     public string ClientName { get; set; } = string.Empty;
     public string Scopes { get; set; } = string.Empty;
-    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? CreatedAt { get; set; }
 }

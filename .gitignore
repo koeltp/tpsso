@@ -60,4 +60,6 @@ Desktop.ini
 logs/
 *.log
 
-wwwroot/avatars
+wwwroot/avatars/
+logos/
+

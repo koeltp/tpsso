@@ -29,6 +29,11 @@ public class ClientApplication
     /// <summary>是否公开客户端（SPA/移动端），公开客户端不需要 Secret</summary>
     public bool IsPublic { get; set; }
 
+    /// <summary>
+    /// 授权确认类型：explicit=每次需用户确认，implicit=自动确认
+    /// </summary>
+    public string ConsentType { get; set; } = "explicit";
+
     /// <summary>审核状态</summary>
     public ClientStatus Status { get; set; } = ClientStatus.Draft;
 
@@ -58,6 +63,9 @@ public class ClientApplication
 
     /// <summary>允许的授权范围集合</summary>
     public ICollection<ClientScope> AllowedScopes { get; set; } = new List<ClientScope>();
+
+    /// <summary>允许的授权类型集合</summary>
+    public ICollection<ClientGrantType> GrantTypes { get; set; } = new List<ClientGrantType>();
 
     // ──────── 业务方法 ────────
 

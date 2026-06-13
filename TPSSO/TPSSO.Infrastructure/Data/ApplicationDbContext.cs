@@ -12,6 +12,7 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
     public DbSet<ClientApplication> ClientApplications => Set<ClientApplication>();
     public DbSet<ClientRedirectUri> ClientRedirectUris => Set<ClientRedirectUri>();
     public DbSet<ClientScope> ClientScopes => Set<ClientScope>();
+    public DbSet<ClientGrantType> ClientGrantTypes => Set<ClientGrantType>();
     public DbSet<DictType> DictTypes => Set<DictType>();
     public DbSet<DictItem> DictItems => Set<DictItem>();
 
@@ -94,6 +95,7 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
             entity.Property(e => e.Description).HasMaxLength(500);
             entity.Property(e => e.Logo).HasMaxLength(500);
             entity.Property(e => e.OpenIddictApplicationId).HasMaxLength(100);
+            entity.Property(e => e.ConsentType).HasMaxLength(50).HasDefaultValue("explicit");
             entity.Property(e => e.ReviewRemark).HasMaxLength(500);
             entity.Property(e => e.RowVersion).IsRowVersion();
             entity.HasIndex(e => e.ClientId).IsUnique();
@@ -112,6 +114,13 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
         {
             entity.ToTable("ClientScopes");
             entity.Property(e => e.Scope).HasMaxLength(100).IsRequired();
+            entity.HasIndex(e => e.ClientApplicationId);
+        });
+
+        builder.Entity<ClientGrantType>(entity =>
+        {
+            entity.ToTable("ClientGrantTypes");
+            entity.Property(e => e.GrantType).HasMaxLength(100).IsRequired();
             entity.HasIndex(e => e.ClientApplicationId);
         });
 

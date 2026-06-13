@@ -43,10 +43,12 @@ public class ClientService : IClientService
             Description = model.Description,
             Logo = model.Logo,
             IsPublic = model.IsPublic,
+            ConsentType = model.ConsentType,
             Status = ClientStatus.Draft,
             CreatedByUserId = userId,
             RedirectUris = ParseRedirectUris(model.RedirectUris),
-            AllowedScopes = ParseScopes(model.AllowedScopes)
+            AllowedScopes = ParseScopes(model.AllowedScopes),
+            GrantTypes = ParseGrantTypes(model.GrantTypes)
         };
 
         _context.ClientApplications.Add(client);
@@ -62,8 +64,8 @@ public class ClientService : IClientService
             throw new AppException(AppCodes.ClientNotFound, "客户端不存在");
         if (client.CreatedByUserId != userId)
             throw new ForbiddenException(AppCodes.ClientNoPermission, "无权操作此客户端");
-        if (client.Status != ClientStatus.Draft)
-            throw new BadRequestException(AppCodes.ClientInvalidStatus, "仅草稿状态可提交审核");
+        if (client.Status != ClientStatus.Draft && client.Status != ClientStatus.Rejected)
+            throw new BadRequestException(AppCodes.ClientInvalidStatus, "仅草稿或已拒绝状态可提交审核");
 
         var invalidUris = client.RedirectUris.Where(u => !Uri.TryCreate(u.Uri, UriKind.Absolute, out var uri) || (uri.Scheme != "http" && uri.Scheme != "https")).ToList();
         if (invalidUris.Any())
@@ -106,12 +108,34 @@ public class ClientService : IClientService
 
         var permissions = new List<string>
         {
-            Permissions.Endpoints.Authorization,
             Permissions.Endpoints.Token,
-            Permissions.Endpoints.EndSession,
-            Permissions.ResponseTypes.Code,
-            Permissions.GrantTypes.AuthorizationCode
+            Permissions.Endpoints.Introspection,
+            Permissions.Endpoints.Revocation
         };
+
+        // 根据客户端选择的授权类型动态添加端点和授权类型权限
+        foreach (var grantType in client.GrantTypes)
+        {
+            switch (grantType.GrantType)
+            {
+                case "authorization_code":
+                    permissions.Add(Permissions.Endpoints.Authorization);
+                    permissions.Add(Permissions.Endpoints.EndSession);
+                    permissions.Add(Permissions.ResponseTypes.Code);
+                    permissions.Add(Permissions.GrantTypes.AuthorizationCode);
+                    break;
+                case "refresh_token":
+                    permissions.Add(Permissions.GrantTypes.RefreshToken);
+                    break;
+                case "client_credentials":
+                    permissions.Add(Permissions.GrantTypes.ClientCredentials);
+                    break;
+                case "device_code":
+                    permissions.Add(Permissions.Endpoints.DeviceAuthorization);
+                    permissions.Add(Permissions.Prefixes.GrantType + "device_code");
+                    break;
+            }
+        }
 
         foreach (var scope in client.AllowedScopes)
         {
@@ -123,7 +147,7 @@ public class ClientService : IClientService
         var descriptor = new OpenIddictApplicationDescriptor
         {
             ClientId = client.ClientId,
-            ConsentType = ConsentTypes.Implicit,
+            ConsentType = client.ConsentType == "implicit" ? ConsentTypes.Implicit : ConsentTypes.Explicit,
             DisplayName = client.Name,
             ClientSecret = client.IsPublic ? null : GenerateSecret()
         };
@@ -176,8 +200,8 @@ public class ClientService : IClientService
             throw new AppException(AppCodes.ClientNotFound, "客户端不存在");
         if (client.CreatedByUserId != userId)
             throw new ForbiddenException(AppCodes.ClientNoPermission, "无权修改此客户端");
-        if (client.Status != ClientStatus.Draft)
-            throw new BadRequestException(AppCodes.ClientInvalidStatus, "仅草稿状态可编辑，请先撤回");
+        if (client.Status != ClientStatus.Draft && client.Status != ClientStatus.Rejected)
+            throw new BadRequestException(AppCodes.ClientInvalidStatus, "仅草稿或已拒绝状态可编辑");
 
         if (!string.IsNullOrEmpty(model.RowVersion))
         {
@@ -187,6 +211,7 @@ public class ClientService : IClientService
         client.Name = model.Name;
         client.Description = model.Description;
         client.Logo = model.Logo;
+        client.ConsentType = model.ConsentType;
         client.UpdatedAt = DateTime.UtcNow;
 
         var oldUris = await _context.ClientRedirectUris.Where(u => u.ClientApplicationId == id).ToListAsync();
@@ -203,6 +228,14 @@ public class ClientService : IClientService
         {
             s.ClientApplicationId = client.Id;
             return s;
+        }));
+
+        var oldGrantTypes = await _context.ClientGrantTypes.Where(g => g.ClientApplicationId == id).ToListAsync();
+        _context.ClientGrantTypes.RemoveRange(oldGrantTypes);
+        _context.ClientGrantTypes.AddRange(ParseGrantTypes(model.GrantTypes).Select(g =>
+        {
+            g.ClientApplicationId = client.Id;
+            return g;
         }));
 
         try
@@ -236,6 +269,7 @@ public class ClientService : IClientService
 
         _context.ClientRedirectUris.RemoveRange(client.RedirectUris);
         _context.ClientScopes.RemoveRange(client.AllowedScopes);
+        _context.ClientGrantTypes.RemoveRange(client.GrantTypes);
         _context.ClientApplications.Remove(client);
         await _context.SaveChangesAsync();
     }
@@ -245,6 +279,7 @@ public class ClientService : IClientService
         var query = _context.ClientApplications
             .Include(c => c.RedirectUris)
             .Include(c => c.AllowedScopes)
+            .Include(c => c.GrantTypes)
             .AsQueryable();
 
         query = query.WhereIf(!isAdmin, c => c.CreatedByUserId == userId);
@@ -307,6 +342,21 @@ public class ClientService : IClientService
         return result;
     }
 
+    public async Task UpdateLogoAsync(Guid id, Guid userId, string logoUrl)
+    {
+        var client = await FindClientAsync(id);
+        if (client == null)
+            throw new AppException(AppCodes.ClientNotFound, "客户端不存在");
+
+        // 仅客户端所有者或管理员可更新 Logo
+        if (client.CreatedByUserId != userId)
+            throw new ForbiddenException(AppCodes.ClientNoPermission, "无权操作此客户端");
+
+        client.Logo = logoUrl;
+        client.UpdatedAt = DateTime.UtcNow;
+        await _context.SaveChangesAsync();
+    }
+
     // ──────── 私有方法 ────────
 
     private async Task<ClientApplication?> FindClientAsync(Guid id)
@@ -314,6 +364,7 @@ public class ClientService : IClientService
         return await _context.ClientApplications
             .Include(c => c.RedirectUris)
             .Include(c => c.AllowedScopes)
+            .Include(c => c.GrantTypes)
             .FirstOrDefaultAsync(c => c.Id == id);
     }
 
@@ -335,6 +386,15 @@ public class ClientService : IClientService
             .ToList();
     }
 
+    private static List<ClientGrantType> ParseGrantTypes(string raw)
+    {
+        return raw.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(g => g.Trim())
+            .Where(g => g.Length > 0)
+            .Select(g => new ClientGrantType { GrantType = g })
+            .ToList();
+    }
+
     private static string GenerateSecret()
     {
         return Convert.ToBase64String(Guid.NewGuid().ToByteArray()).TrimEnd('=');
@@ -351,7 +411,9 @@ public class ClientService : IClientService
             Logo = client.Logo,
             RedirectUris = string.Join("\n", client.RedirectUris.Select(u => u.Uri)),
             AllowedScopes = string.Join(" ", client.AllowedScopes.Select(s => s.Scope)),
+            GrantTypes = string.Join(" ", client.GrantTypes.Select(g => g.GrantType)),
             IsPublic = client.IsPublic,
+            ConsentType = client.ConsentType,
             Status = client.Status.ToString(),
             ReviewRemark = client.ReviewRemark,
             CreatedAt = client.CreatedAt,
@@ -372,7 +434,9 @@ public class ClientService : IClientService
             Logo = baseResult.Logo,
             RedirectUris = baseResult.RedirectUris,
             AllowedScopes = baseResult.AllowedScopes,
+            GrantTypes = baseResult.GrantTypes,
             IsPublic = baseResult.IsPublic,
+            ConsentType = baseResult.ConsentType,
             Status = baseResult.Status,
             ReviewRemark = baseResult.ReviewRemark,
             CreatedAt = baseResult.CreatedAt,
