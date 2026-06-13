@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Taipi.Core.RQRS;
 using TPSSO.Application.Exceptions;
 
@@ -11,6 +12,12 @@ namespace TPSSO.Admin.Middleware;
 /// </summary>
 public class ExceptionHandlingMiddleware
 {
+    private static readonly JsonSerializerOptions _jsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
+
     private readonly RequestDelegate _next;
     private readonly ILogger<ExceptionHandlingMiddleware> _logger;
     private readonly IWebHostEnvironment _environment;
@@ -54,15 +61,15 @@ public class ExceptionHandlingMiddleware
 
             // 框架异常：HTTP 4xx/5xx + 系统错误码，前端在 axios 拦截器中处理
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized,
-                StatusResponseResult.Error(1001, "未授权")),
+                StatusResponseResult.Error(AppCodes.SystemUnauthorized, "未授权")),
             ArgumentException => (StatusCodes.Status400BadRequest,
-                StatusResponseResult.Error(1, exception.Message)),
+                StatusResponseResult.Error(AppCodes.SystemBadRequest, exception.Message)),
             KeyNotFoundException => (StatusCodes.Status404NotFound,
-                StatusResponseResult.Error(2, "资源不存在")),
+                StatusResponseResult.Error(AppCodes.SystemNotFound, "资源不存在")),
 
             // 未知异常：HTTP 500
             _ => (StatusCodes.Status500InternalServerError,
-                StatusResponseResult.Error(9999, _environment.IsProduction() ? "服务器内部错误" : exception.ToString()))
+                StatusResponseResult.Error(AppCodes.SystemError, _environment.IsProduction() ? "服务器内部错误" : exception.ToString()))
         };
 
         // 附加 correlationId 便于前端/日志关联
@@ -71,10 +78,6 @@ public class ExceptionHandlingMiddleware
         context.Response.StatusCode = httpStatusCode;
         context.Response.ContentType = "application/json";
 
-        await context.Response.WriteAsync(JsonSerializer.Serialize(result, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-        }));
+        await context.Response.WriteAsync(JsonSerializer.Serialize(result, _jsonOptions));
     }
 }

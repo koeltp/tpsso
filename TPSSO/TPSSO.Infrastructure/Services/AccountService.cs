@@ -59,7 +59,6 @@ public class AccountService : IAccountService
 
     public async Task LogoutAsync()
     {
-        var userId = _userManager.GetUserId(_signInManager.Context?.User!);
         await _signInManager.SignOutAsync();
     }
 
