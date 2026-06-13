@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Taipi.Core.RQRS;
+using Taipi.Core.Exceptions;
 using TPSSO.Application.Exceptions;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;

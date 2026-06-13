@@ -1,14 +1,7 @@
 import axios from 'axios'
 import { ElMessage, ElNotification } from 'element-plus'
 import { useUserStore } from '@/stores/user'
-
-// 注入通知进度条动画样式
-if (!document.getElementById('notify-progress-style')) {
-  const style = document.createElement('style')
-  style.id = 'notify-progress-style'
-  style.textContent = `@keyframes notify-shrink{from{width:100%}to{width:0%}}`
-  document.head.appendChild(style)
-}
+import '@/styles/notify.css'
 
 /** 后端统一响应格式 */
 interface ResponseResult<T = unknown> {
@@ -33,16 +26,12 @@ function showErrorWithTrace(message: string, correlationId?: string) {
     ElMessage.error(message)
     return
   }
-  const duration = 10000
-  const notifyId = `err_${Date.now()}`
   ElNotification({
-    key: notifyId,
     title: '操作失败',
     dangerouslyUseHTMLString: true,
-    message: `<div>${message}</div><div style="margin-top:8px;font-size:12px;color:#999;display:flex;align-items:center;gap:8px">追踪ID: ${correlationId}<a href="javascript:void(0)" style="color:#409eff;cursor:pointer" onclick="window.__copyTraceId__('${correlationId}')">复制</a></div><div style="margin-top:10px;height:3px;background:#f5f5f5;border-radius:2px;overflow:hidden"><div class="notify-progress" style="height:100%;background:linear-gradient(90deg,#f56c6c,#f89898);border-radius:2px;animation:notify-shrink ${duration}ms linear forwards"></div></div>`,
+    message: `<div>${message}</div><div class="notify-trace">追踪ID: ${correlationId}<a href="javascript:void(0)" class="notify-trace__copy" onclick="window.__copyTraceId__('${correlationId}')">复制</a></div><div class="notify-progress-bar"><div class="notify-progress-bar__inner"></div></div>`,
     type: 'error',
-    duration,
-    customClass: 'notify-with-progress'
+    duration: 10000
   })
 }
 

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Abstractions;
 using Taipi.Core.RQRS;
+using Taipi.Core.Exceptions;
 using TPSSO.Application.Exceptions;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;

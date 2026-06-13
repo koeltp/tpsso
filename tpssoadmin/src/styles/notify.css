@@ -1,0 +1,35 @@
+/* 错误通知：追踪ID区域 */
+.notify-trace {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notify-trace__copy {
+  color: #409eff;
+  cursor: pointer;
+}
+
+/* 错误通知：进度条 */
+.notify-progress-bar {
+  margin-top: 10px;
+  height: 3px;
+  background: #f5f5f5;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.notify-progress-bar__inner {
+  height: 100%;
+  background: linear-gradient(90deg, #f56c6c, #f89898);
+  border-radius: 2px;
+  animation: notify-shrink 30s linear forwards;
+}
+
+@keyframes notify-shrink {
+  from { width: 100%; }
+  to { width: 0%; }
+}

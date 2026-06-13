@@ -1,3 +1,6 @@
+using Taipi.Core;
+using TPSSO.Application.Exceptions;
+
 namespace TPSSO.Auth.Middleware;
 
 /// <summary>
@@ -6,11 +9,11 @@ namespace TPSSO.Auth.Middleware;
 public static class MiddlewareExtensions
 {
     /// <summary>
-    /// 注册全局异常处理中间件
+    /// 注册全局异常处理中间件，使用项目自定义的错误码
     /// </summary>
     public static IApplicationBuilder UseExceptionHandling(this IApplicationBuilder app)
     {
-        return app.UseMiddleware<ExceptionHandlingMiddleware>();
+        return app.UseTaiPiExceptionHandling();
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using Taipi.Core.Exceptions;
 using TPSSO.Application.Exceptions;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;

@@ -1,6 +1,8 @@
 using Serilog;
+using Taipi.Core;
 using TPSSO.Auth.Extensions;
 using TPSSO.Auth.Middleware;
+using TPSSO.Application.Exceptions;
 using TPSSO.Infrastructure.Seeding;
 
 // Serilog 引导日志：在 Host 构建前初始化，确保启动阶段的日志也能写入
@@ -24,6 +26,13 @@ try
     builder.Services.AddCorsPolicy();
     builder.Services.AddHealthCheckServices(builder.Configuration);
     builder.Services.AddApplicationServices();
+    builder.Services.AddTaiPiExceptionHandling(options =>
+    {
+        options.UnauthorizedCode = AppCodes.SystemUnauthorized;
+        options.BadRequestCode = AppCodes.SystemBadRequest;
+        options.NotFoundCode = AppCodes.SystemNotFound;
+        options.UnknownErrorCode = AppCodes.SystemError;
+    });
     builder.Services.AddControllers();
     builder.Services.AddOpenApi();
     builder.Services.AddHttpsRedirection(x => x.HttpsPort = 443);

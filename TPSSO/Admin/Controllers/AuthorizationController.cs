@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
 using OpenIddict.EntityFrameworkCore.Models;
 using Taipi.Core.RQRS;
+using Taipi.Core.Exceptions;
 using TPSSO.Application.Exceptions;
 using TPSSO.Application.Models;
 using TPSSO.Infrastructure.Data;

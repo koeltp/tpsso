@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Taipi.Core.Linq;
 using Taipi.Core.RQRS;
+using Taipi.Core.Exceptions;
 using TPSSO.Application.Exceptions;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;
