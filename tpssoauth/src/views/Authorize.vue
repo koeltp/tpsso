@@ -1,40 +1,41 @@
 <template>
-  <div class="logo-area">
-    <img :src="logoSrc" alt="TPSSO" class="logo-img" />
-  </div>
-  <h1 class="title">授权确认</h1>
-
-  <!-- 客户端信息卡片 -->
-  <div class="app-info-card" v-if="appName">
-    <el-avatar v-if="appLogo" :src="appLogo" :size="48" shape="square" class="app-logo" />
-    <el-avatar v-else :size="48" shape="square" class="app-logo-placeholder">{{ appName.charAt(0) }}</el-avatar>
-    <div class="app-info-text">
-      <strong class="app-name">{{ appName }}</strong>
-      <p v-if="appDesc" class="app-desc">{{ appDesc }}</p>
-    </div>
-  </div>
-
-  <p class="desc">
-    请求访问你的以下信息，你可以选择授权的范围：
-  </p>
-
-  <div class="scope-list">
-    <el-checkbox-group v-model="checkedScopes">
-      <div v-for="item in scopeItems" :key="item.name" class="scope-item">
-        <el-checkbox :value="item.name" :disabled="item.required">
-          <div class="scope-label">
-            <el-icon :size="16" class="scope-icon"><component :is="item.icon" /></el-icon>
-            <span>{{ item.label }}</span>
-            <el-tag v-if="item.required" size="small" type="info">必须</el-tag>
-          </div>
-        </el-checkbox>
+  <div class="authorize-container">
+    <!-- 应用信息头部：Logo + 名称/描述（无背景色） -->
+    <div class="app-info-header">
+      <div class="app-logo-box">
+        <img :src="displayLogo" alt="TPSSO" class="app-logo-img" />
       </div>
-    </el-checkbox-group>
-  </div>
+      <div class="app-info-text">
+        <h2 class="app-name">{{ appName }}</h2>
+        <p v-if="appDesc" class="app-desc">{{ appDesc }}</p>
+      </div>
+    </div>
 
-  <div class="actions">
-    <el-button size="large" @click="handleDeny">拒 绝</el-button>
-    <el-button type="primary" size="large" :loading="loading" @click="handleApprove">同 意</el-button>
+    <!-- 授权确认标题 -->
+    <h1 class="title">授权确认</h1>
+
+    <p class="desc">
+      请求访问你的以下信息，你可以选择授权的范围：
+    </p>
+
+    <div class="scope-list">
+      <el-checkbox-group v-model="checkedScopes">
+        <div v-for="item in scopeItems" :key="item.name" class="scope-item">
+          <el-checkbox :value="item.name" :disabled="item.required">
+            <div class="scope-label">
+              <el-icon :size="16" class="scope-icon"><component :is="item.icon" /></el-icon>
+              <span>{{ item.label }}</span>
+              <el-tag v-if="item.required" size="small" type="info">必须</el-tag>
+            </div>
+          </el-checkbox>
+        </div>
+      </el-checkbox-group>
+    </div>
+
+    <div class="actions">
+      <el-button size="large" @click="handleDeny">拒 绝</el-button>
+      <el-button type="primary" size="large" :loading="loading" @click="handleApprove">同 意</el-button>
+    </div>
   </div>
 </template>
 
@@ -51,6 +52,16 @@ const appName = computed(() => (route.query.app_name as string) || '未知应用
 const appLogo = computed(() => (route.query.app_logo as string) || '')
 const appDesc = computed(() => (route.query.app_desc as string) || '')
 const loading = ref(false)
+
+/** 显示的Logo：优先应用Logo，否则主站Logo */
+const displayLogo = computed(() => {
+  if (appLogo.value) {
+    if (appLogo.value.startsWith('http')) return appLogo.value
+    const base = import.meta.env.VITE_LOGO_URL || ''
+    return base + appLogo.value
+  }
+  return logoSrc
+})
 
 const scopeMap: Record<string, { label: string; icon: typeof User; required?: boolean }> = {
   openid: { label: '你的身份标识', icon: User, required: true },
@@ -74,7 +85,6 @@ const checkedScopes = ref(
   ((route.query.scope as string) || '').split(' ').filter(Boolean)
 )
 
-/** 同意授权：提交表单到 /connect/authorize */
 const handleApprove = () => {
   loading.value = true
   const form = document.createElement('form')
@@ -83,7 +93,7 @@ const handleApprove = () => {
 
   const params = route.query
   for (const key of Object.keys(params)) {
-    if (params[key] === undefined || key === 'app_name') continue
+    if (params[key] === undefined || key === 'app_name' || key === 'app_logo' || key === 'app_desc') continue
     const input = document.createElement('input')
     input.type = 'hidden'
     input.name = key
@@ -101,20 +111,70 @@ const handleDeny = () => {
 </script>
 
 <style scoped>
-.logo-area {
-  text-align: center;
-  margin-bottom: 8px;
+.authorize-container {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 24px 20px;
 }
 
-.logo-area .logo-img {
-  max-width: 100%;
-  height: auto;
-  max-height: 64px;
+/* 头部区域：无背景色 */
+.app-info-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.app-logo-box {
+  flex-shrink: 0;
+}
+
+/* Logo 基础样式 + 过渡动画 */
+.app-logo-img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  border-radius: 16px;
+  background: white;
+  padding: 6px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  cursor: pointer;
+}
+
+/* 鼠标悬停效果：轻微放大 + 阴影加深 */
+.app-logo-img:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+
+.app-info-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-name {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 6px 0;
+  color: #1f2f3d;
+}
+
+.app-desc {
+  font-size: 14px;
+  color: #909399;
+  margin: 0;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .title {
   text-align: center;
-  margin-bottom: 20px;
+  margin: 16px 0 8px;
   color: #333;
   font-size: 24px;
   font-weight: 600;
@@ -126,43 +186,6 @@ const handleDeny = () => {
   font-size: 15px;
   line-height: 1.6;
   margin-bottom: 20px;
-}
-
-.app-info-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #f0f5ff;
-  border-radius: 12px;
-  padding: 12px 16px;
-  margin-bottom: 16px;
-}
-
-.app-logo-placeholder {
-  background: #e6f7ff;
-  color: #1890ff;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.app-info-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.app-name {
-  font-size: 16px;
-  color: #333;
-  display: block;
-}
-
-.app-desc {
-  font-size: 13px;
-  color: #999;
-  margin: 4px 0 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .scope-list {
