@@ -36,7 +36,7 @@ public class DictSeeder(ApplicationDbContext context, ILogger<DictSeeder> logger
                 Items =
                 [
                     new DictItem { Key = "ClientId", Value = "Ov23lietsdCwxFEgi6Ky", Description = "GitHub OAuth Client ID", Sort = 1 },
-                    new DictItem { Key = "ClientSecret", Value = "xxx", Description = "GitHub OAuth Client Secret", IsSensitive = true, Sort = 2 },
+                    new DictItem { Key = "ClientSecret", Value = "xxxxxxxxxxxxxxxxxx", Description = "GitHub OAuth Client Secret", IsSensitive = true, Sort = 2 },
                     new DictItem { Key = "IsEnabled", Value = "true", Description = "是否启用 GitHub 登录", Sort = 3 },
                 ]
             },
@@ -46,8 +46,8 @@ public class DictSeeder(ApplicationDbContext context, ILogger<DictSeeder> logger
                 ParentId = oauthType.Id,
                 Items =
                 [
-                    new DictItem { Key = "ClientId", Value = "", Description = "Google OAuth Client ID", Sort = 1 },
-                    new DictItem { Key = "ClientSecret", Value = "", Description = "Google OAuth Client Secret", IsSensitive = true, Sort = 2 },
+                    new DictItem { Key = "ClientId", Value = "xxx", Description = "Google OAuth Client ID", Sort = 1 },
+                    new DictItem { Key = "ClientSecret", Value = "xxxxxxxxxxxxxxxxxx", Description = "Google OAuth Client Secret", IsSensitive = true, Sort = 2 },
                     new DictItem { Key = "IsEnabled", Value = "false", Description = "是否启用 Google 登录", Sort = 3 },
                 ]
             },
@@ -57,8 +57,8 @@ public class DictSeeder(ApplicationDbContext context, ILogger<DictSeeder> logger
                 ParentId = oauthType.Id,
                 Items =
                 [
-                    new DictItem { Key = "AppId", Value = "", Description = "微信 App ID", Sort = 1 },
-                    new DictItem { Key = "AppSecret", Value = "", Description = "微信 App Secret", IsSensitive = true, Sort = 2 },
+                    new DictItem { Key = "AppId", Value = "xxx", Description = "微信 App ID", Sort = 1 },
+                    new DictItem { Key = "AppSecret", Value = "xxxxxxxxxxxxxxxxxx", Description = "微信 App Secret", IsSensitive = true, Sort = 2 },
                     new DictItem { Key = "IsEnabled", Value = "false", Description = "是否启用微信登录", Sort = 3 },
                 ]
             },
@@ -116,7 +116,7 @@ public class DictSeeder(ApplicationDbContext context, ILogger<DictSeeder> logger
                     new DictItem { Key = "Port", Value = "587", Description = "SMTP 端口", Sort = 2 },
                     new DictItem { Key = "UseSsl", Value = "true", Description = "是否使用 SSL", Sort = 3 },
                     new DictItem { Key = "Username", Value = "tp@taipi.top", Description = "SMTP 用户名", Sort = 4 },
-                    new DictItem { Key = "Password", Value = "", Description = "SMTP 密码", IsSensitive = true, Sort = 5 },
+                    new DictItem { Key = "Password", Value = "xxx", Description = "SMTP 密码", IsSensitive = true, Sort = 5 },
                     new DictItem { Key = "SenderName", Value = "TPSSO", Description = "发件人名称", Sort = 6 },
                     new DictItem { Key = "SenderEmail", Value = "tp@taipi.top", Description = "发件人邮箱", Sort = 7 },
                 ]

@@ -9,8 +9,7 @@ using static OpenIddict.Abstractions.OpenIddictConstants;
 namespace TPSSO.Infrastructure.Seeding;
 
 /// <summary>
-/// 测试客户端种子数据，仅在开发环境使用
-/// 采用 Upsert 模式：已存在则更新，不存在则创建，配置只需定义一次
+/// 测试客户端种子数据，仅在开发环境使用（仅创建，不更新）
 /// </summary>
 public class TestClientSeeder(
     ApplicationDbContext context,
@@ -28,6 +27,7 @@ public class TestClientSeeder(
             Description = "用于测试 Authorization Code + PKCE 授权流程的 SPA 客户端",
             ConsentType = ConsentTypes.Implicit,
             IsPublic = true,
+            Type = ClientTypes.Public,
             RedirectUris =
             [
                 "http://localhost:3000/",
@@ -85,6 +85,7 @@ public class TestClientSeeder(
             Description = "用于测试 Device Code 授权流程的公开客户端（IoT/CLI）",
             ConsentType = ConsentTypes.Implicit,
             IsPublic = true,
+            Type = ClientTypes.Public,
             Permissions =
             [
                 Permissions.Endpoints.DeviceAuthorization,
@@ -110,15 +111,19 @@ public class TestClientSeeder(
 
         foreach (var config in ClientConfigs)
         {
-            await UpsertClientAsync(config, creator);
+            await CreateClientAsync(config, creator);
         }
 
         logger.LogInformation("===== 测试客户端注册完成 =====");
     }
 
-    private async Task UpsertClientAsync(ClientSeedConfig config, User? creator)
+    private async Task CreateClientAsync(ClientSeedConfig config, User? creator)
     {
-        var existing = await manager.FindByClientIdAsync(config.ClientId);
+        // 已存在则跳过
+        if (await manager.FindByClientIdAsync(config.ClientId) is not null)
+        {
+            return;
+        }
 
         var descriptor = new OpenIddictApplicationDescriptor
         {
@@ -131,13 +136,6 @@ public class TestClientSeeder(
         foreach (var uri in config.RedirectUris) descriptor.RedirectUris.Add(new Uri(uri));
         foreach (var uri in config.PostLogoutRedirectUris) descriptor.PostLogoutRedirectUris.Add(new Uri(uri));
         foreach (var perm in config.Permissions) descriptor.Permissions.Add(perm);
-
-        if (existing != null)
-        {
-            await manager.UpdateAsync(existing, descriptor);
-            logger.LogInformation("测试客户端 '{ClientId}' 已更新", config.ClientId);
-            return;
-        }
 
         var app = await manager.CreateAsync(descriptor);
         var openIddictId = (string?)app.GetType().GetProperty("Id")?.GetValue(app);

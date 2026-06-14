@@ -12,7 +12,7 @@ RUN mkdir -p /app/wwwroot && chown -R appuser:appuser /app
 
 # 复制编译产物
 COPY publish/ ./
-
+RUN mkdir -p /app/certbot && chown appuser:appuser /app/certbot
 USER appuser
 
 EXPOSE 80 443

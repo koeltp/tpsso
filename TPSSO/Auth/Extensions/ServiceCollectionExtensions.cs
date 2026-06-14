@@ -138,9 +138,18 @@ public static class ServiceCollectionExtensions
                 }
                 else
                 {
-                    var certPassword = "xxx";
-                    var encryption = X509CertificateLoader.LoadPkcs12FromFile("/app/certbot/encryption.pfx", certPassword);
-                    var signing = X509CertificateLoader.LoadPkcs12FromFile("/app/certbot/signing.pfx", certPassword);
+                    // var encryption = X509CertificateLoader.LoadPkcs12FromFile("./certbot/encryption.pfx", certPassword);
+                    // var signing = X509CertificateLoader.LoadPkcs12FromFile("./certbot/signing.pfx", certPassword);
+
+                    var certPassword = configuration["Certificates:Password"];
+                    var contentRoot = environment.ContentRootPath; // Auth 项目的根目录
+                    var certFolder = Path.Combine(contentRoot, "certbot");
+                    var encryptionPath = Path.Combine(certFolder, "encryption.pfx");
+                    var signingPath = Path.Combine(certFolder, "signing.pfx");
+
+                    var encryption = X509CertificateLoader.LoadPkcs12FromFile(encryptionPath, certPassword);
+                    var signing = X509CertificateLoader.LoadPkcs12FromFile(signingPath, certPassword);
+
                     options.AddEncryptionCertificate(encryption)
                            .AddSigningCertificate(signing);
                 }

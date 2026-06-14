@@ -12,7 +12,7 @@ using TPSSO.Infrastructure.Data;
 namespace TPSSO.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260614015905_Init")]
+    [Migration("20260614034337_Init")]
     partial class Init
     {
         /// <inheritdoc />

@@ -68,8 +68,8 @@ public static class StartupConfigValidator
     /// </summary>
     private static async Task ValidateSmtpConfig(IConfigService configService, ILogger logger)
     {
-        var host = await configService.GetStringAsync("Smtp", "Host");
-        var port = await configService.GetIntAsync("Smtp", "Port");
+        var host = await configService.GetStringAsync("SmtpServer", "Host");
+        var port = await configService.GetIntAsync("SmtpServer", "Port");
 
         if (string.IsNullOrEmpty(host))
         {
