@@ -12,6 +12,9 @@ public class UserInfoResult
 
     /// <summary>用户角色列表</summary>
     public List<string> Roles { get; set; } = [];
+
+    /// <summary>是否启用两步验证</summary>
+    public bool TwoFactorEnabled { get; set; }
 }
 
 /// <summary>

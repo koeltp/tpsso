@@ -6,12 +6,32 @@ export interface UserInfoResult {
   avatarUrl: string
   nickName?: string
   roles: string[]
+  twoFactorEnabled: boolean
+}
+
+export interface LoginResult {
+  userInfo?: UserInfoResult
+  requiresTwoFactor: boolean
+  userId?: string
 }
 
 export interface LoginRequest {
   username: string
   password: string
   rememberMe?: boolean
+}
+
+export interface LoginTwoFactorRequest {
+  userId: string
+  code: string
+  isRecoveryCode?: boolean
+  rememberMe?: boolean
+}
+
+export interface TwoFactorSetupResult {
+  sharedKey: string
+  authenticatorUri: string
+  recoveryCodes: string[]
 }
 
 export interface SendCodeRequest {
@@ -33,8 +53,13 @@ export interface ResetPasswordRequest {
 }
 
 /** Cookie 登录 */
-export const login = (data: LoginRequest): Promise<UserInfoResult> => {
+export const login = (data: LoginRequest): Promise<LoginResult> => {
   return api.post('/api/account/login', data)
+}
+
+/** 两步验证登录 */
+export const loginTwoFactor = (data: LoginTwoFactorRequest): Promise<UserInfoResult> => {
+  return api.post('/api/account/login-2fa', data)
 }
 
 /** 登出 */
@@ -65,6 +90,28 @@ export const sendResetCode = (data: SendCodeRequest): Promise<boolean> => {
 /** 重置密码 */
 export const resetPassword = (data: ResetPasswordRequest): Promise<boolean> => {
   return api.post('/api/account/reset-password', data)
+}
+
+// ──────── 两步验证 ────────
+
+/** 生成两步验证密钥和二维码 */
+export const setupTwoFactor = (): Promise<TwoFactorSetupResult> => {
+  return api.post('/api/account/2fa/setup')
+}
+
+/** 启用两步验证 */
+export const enableTwoFactor = (code: string): Promise<TwoFactorSetupResult> => {
+  return api.post('/api/account/2fa/enable', { code })
+}
+
+/** 禁用两步验证 */
+export const disableTwoFactor = (): Promise<boolean> => {
+  return api.post('/api/account/2fa/disable')
+}
+
+/** 重新生成恢复码 */
+export const resetRecoveryCodes = (): Promise<string[]> => {
+  return api.post('/api/account/2fa/reset-codes')
 }
 
 // ──────── 第三方登录 ────────

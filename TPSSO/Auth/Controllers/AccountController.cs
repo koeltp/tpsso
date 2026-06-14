@@ -23,11 +23,11 @@ public class AccountController : ControllerBase
     /// 用户登录（Cookie 认证）
     /// </summary>
     [HttpPost("login")]
-    public async Task<ResponseResult<UserInfoResult>> Login([FromBody] LoginModel model)
+    public async Task<ResponseResult<LoginResult>> Login([FromBody] LoginModel model)
     {
         _logger.LogInformation("用户登录，用户名：{Username}。", model.Username);
         var data = await _accountService.LoginAsync(model);
-        return ResponseResult<UserInfoResult>.Success(data);
+        return new ResponseResult<LoginResult>(data);
     }
 
     /// <summary>
@@ -90,5 +90,61 @@ public class AccountController : ControllerBase
     {
         await _accountService.ResetPasswordAsync(model);
         return StatusResponseResult.Success("密码已重置");
+    }
+
+    // ──────── 两步验证 ────────
+
+    /// <summary>
+    /// 两步验证登录（密码验证通过后）
+    /// </summary>
+    [HttpPost("login-2fa")]
+    public async Task<ResponseResult<UserInfoResult>> LoginTwoFactor([FromBody] LoginTwoFactorModel model)
+    {
+        var data = await _accountService.LoginTwoFactorAsync(model);
+        return ResponseResult<UserInfoResult>.Success(data);
+    }
+
+    /// <summary>
+    /// 生成两步验证密钥和二维码信息
+    /// </summary>
+    [HttpPost("2fa/setup")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<ResponseResult<TwoFactorSetupResult>> GenerateTwoFactorSetup()
+    {
+        var data = await _accountService.GenerateTwoFactorSetupAsync(User);
+        return new ResponseResult<TwoFactorSetupResult>(data);
+    }
+
+    /// <summary>
+    /// 启用两步验证（验证 TOTP 码确认绑定）
+    /// </summary>
+    [HttpPost("2fa/enable")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<ResponseResult<TwoFactorSetupResult>> EnableTwoFactor([FromBody] TwoFactorVerifyModel model)
+    {
+        var data = await _accountService.EnableTwoFactorAsync(User, model.Code);
+        return new ResponseResult<TwoFactorSetupResult>(data);
+    }
+
+    /// <summary>
+    /// 禁用两步验证
+    /// </summary>
+    [HttpPost("2fa/disable")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<StatusResponseResult> DisableTwoFactor()
+    {
+        await _accountService.DisableTwoFactorAsync(User);
+        return StatusResponseResult.Success("两步验证已禁用");
+    }
+
+    /// <summary>
+    /// 重新生成恢复码
+    /// </summary>
+    [HttpPost("2fa/reset-codes")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<ResponseResult<List<string>>> RegenerateRecoveryCodes()
+    {
+        var data = await _accountService.RegenerateRecoveryCodesAsync(User);
+        return new ResponseResult<List<string>>(data);
     }
 }

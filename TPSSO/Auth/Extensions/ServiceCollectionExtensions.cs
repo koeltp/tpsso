@@ -193,6 +193,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddApplicationServices(this IServiceCollection services, IHostEnvironment environment)
     {
         services.AddScoped<IAccountService, AccountService>();
+        services.AddScoped<ITotpService, TotpService>();
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IVerificationCodeService, VerificationCodeService>();
         services.AddScoped<IConfigService, ConfigService>();

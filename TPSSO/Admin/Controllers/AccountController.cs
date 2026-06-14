@@ -98,4 +98,50 @@ public class AccountController : ControllerBase
         await _accountService.ChangePasswordAsync(User, model);
         return StatusResponseResult.Success("密码修改成功");
     }
+
+    // ──────── 两步验证 ────────
+
+    /// <summary>
+    /// 生成两步验证密钥和二维码信息
+    /// </summary>
+    [HttpPost("2fa/setup")]
+    [Authorize]
+    public async Task<ResponseResult<TwoFactorSetupResult>> GenerateTwoFactorSetup()
+    {
+        var data = await _accountService.GenerateTwoFactorSetupAsync(User);
+        return new ResponseResult<TwoFactorSetupResult>(data);
+    }
+
+    /// <summary>
+    /// 启用两步验证（验证 TOTP 码确认绑定）
+    /// </summary>
+    [HttpPost("2fa/enable")]
+    [Authorize]
+    public async Task<ResponseResult<TwoFactorSetupResult>> EnableTwoFactor([FromBody] TwoFactorVerifyModel model)
+    {
+        var data = await _accountService.EnableTwoFactorAsync(User, model.Code);
+        return new ResponseResult<TwoFactorSetupResult>(data);
+    }
+
+    /// <summary>
+    /// 禁用两步验证
+    /// </summary>
+    [HttpPost("2fa/disable")]
+    [Authorize]
+    public async Task<StatusResponseResult> DisableTwoFactor()
+    {
+        await _accountService.DisableTwoFactorAsync(User);
+        return StatusResponseResult.Success("两步验证已禁用");
+    }
+
+    /// <summary>
+    /// 重新生成恢复码
+    /// </summary>
+    [HttpPost("2fa/reset-codes")]
+    [Authorize]
+    public async Task<ResponseResult<List<string>>> RegenerateRecoveryCodes()
+    {
+        var data = await _accountService.RegenerateRecoveryCodesAsync(User);
+        return new ResponseResult<List<string>>(data);
+    }
 }

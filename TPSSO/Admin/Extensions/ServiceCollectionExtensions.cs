@@ -156,6 +156,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
         services.AddScoped<IAccountService, AccountService>();
+        services.AddScoped<ITotpService, TotpService>();
         services.AddScoped<IClientService, ClientService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IDictService, DictService>();

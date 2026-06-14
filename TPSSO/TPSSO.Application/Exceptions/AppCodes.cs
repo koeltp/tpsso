@@ -49,4 +49,11 @@ public static class AppCodes
     public const int UploadEmpty = 180001;
     public const int UploadInvalidType = 180002;
     public const int UploadTooLarge = 180003;
+
+    // ── 两步验证 190 ──
+    public const int TwoFactorRequired = 190001;
+    public const int TwoFactorInvalidCode = 190002;
+    public const int TwoFactorNotEnabled = 190003;
+    public const int TwoFactorAlreadyEnabled = 190004;
+    public const int TwoFactorSetupRequired = 190005;
 }
