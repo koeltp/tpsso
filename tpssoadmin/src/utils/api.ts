@@ -110,7 +110,10 @@ api.interceptors.response.use(
     if (!error.response) {
       ElMessage.error('网络连接失败，请检查网络')
     }
-    else if (error.response?.status !== 401) {
+    else if (error.response?.status === 401) {
+      showErrorWithTrace(errorMessage || '请求参数错误', correlationId)
+    }
+    else {
       showErrorWithTrace(errorMessage || '请求失败', correlationId)
     }
 
