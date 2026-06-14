@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Hosting;
 using Serilog;
 using Taipi.Core;
 using TPSSO.Auth.Extensions;
@@ -35,7 +36,11 @@ try
     });
     builder.Services.AddControllers();
     builder.Services.AddOpenApi();
-    builder.Services.AddHttpsRedirection(x => x.HttpsPort = 443);
+    //当环境变量不是 "true" 时添加（包括未设置或为 "false"）
+    if (Environment.GetEnvironmentVariable("DOTNET_HOSTBUILDER__DESIGN_TIME") != "true")
+    {
+        builder.Services.AddHttpsRedirection(x => x.HttpsPort = 443);
+    }
 
     var app = builder.Build();
 
@@ -60,15 +65,8 @@ try
     // 初始化种子数据 + 启动配置校验
     using (var scope = app.Services.CreateScope())
     {
-        var seeder = scope.ServiceProvider.GetRequiredService<ClientSeeder>();
-        await seeder.SeedAsync();
-
-        // 开发环境注册测试客户端
-        if (app.Environment.IsDevelopment())
-        {
-            var testSeeder = scope.ServiceProvider.GetRequiredService<TestClientSeeder>();
-            await testSeeder.SeedAsync();
-        }
+        var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
+        await seeder.SeedAsync(app.Environment.IsDevelopment());
 
         var startupLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
         await StartupConfigValidator.ValidateAsync(app.Services, startupLogger);
@@ -76,7 +74,7 @@ try
 
     app.Run();
 }
-catch (Exception ex)
+catch (Exception ex) when (ex is not HostAbortedException)
 {
     Log.Fatal(ex, "TPSSO.Auth 服务异常终止");
 }

@@ -197,7 +197,14 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IVerificationCodeService, VerificationCodeService>();
         services.AddScoped<IConfigService, ConfigService>();
+
+        // 种子数据服务
+        services.AddScoped<ScopeSeeder>();
+        services.AddScoped<RoleSeeder>();
+        services.AddScoped<UserSeeder>();
         services.AddScoped<ClientSeeder>();
+        services.AddScoped<DictSeeder>();
+        services.AddScoped<DataSeeder>();
 
         // 仅开发环境注册测试客户端种子数据
         if (environment.IsDevelopment())

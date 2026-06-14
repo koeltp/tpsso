@@ -12,8 +12,8 @@ using TPSSO.Infrastructure.Data;
 namespace TPSSO.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260613000408_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260614015905_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -351,6 +351,13 @@ namespace TPSSO.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("varchar(500)");
 
+                    b.Property<string>("ConsentType")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)")
+                        .HasDefaultValue("explicit");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
@@ -408,6 +415,30 @@ namespace TPSSO.Infrastructure.Migrations
                     b.HasIndex("Status");
 
                     b.ToTable("ClientApplications", (string)null);
+                });
+
+            modelBuilder.Entity("TPSSO.Domain.Entities.ClientGrantType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("ClientApplicationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("GrantType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientApplicationId");
+
+                    b.ToTable("ClientGrantTypes", (string)null);
                 });
 
             modelBuilder.Entity("TPSSO.Domain.Entities.ClientRedirectUri", b =>
@@ -638,11 +669,17 @@ namespace TPSSO.Infrastructure.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<string>("RecoveryCodes")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("longtext");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("TwoFactorSecret")
+                        .HasColumnType("longtext");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(100)
@@ -771,6 +808,17 @@ namespace TPSSO.Infrastructure.Migrations
                     b.Navigation("Authorization");
                 });
 
+            modelBuilder.Entity("TPSSO.Domain.Entities.ClientGrantType", b =>
+                {
+                    b.HasOne("TPSSO.Domain.Entities.ClientApplication", "ClientApplication")
+                        .WithMany("GrantTypes")
+                        .HasForeignKey("ClientApplicationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ClientApplication");
+                });
+
             modelBuilder.Entity("TPSSO.Domain.Entities.ClientRedirectUri", b =>
                 {
                     b.HasOne("TPSSO.Domain.Entities.ClientApplication", "ClientApplication")
@@ -829,6 +877,8 @@ namespace TPSSO.Infrastructure.Migrations
             modelBuilder.Entity("TPSSO.Domain.Entities.ClientApplication", b =>
                 {
                     b.Navigation("AllowedScopes");
+
+                    b.Navigation("GrantTypes");
 
                     b.Navigation("RedirectUris");
                 });

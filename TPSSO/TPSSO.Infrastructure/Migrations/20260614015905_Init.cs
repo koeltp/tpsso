@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace TPSSO.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class Init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -76,6 +76,8 @@ namespace TPSSO.Infrastructure.Migrations
                     Logo = table.Column<string>(type: "varchar(500)", maxLength: 500, nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     IsPublic = table.Column<bool>(type: "tinyint(1)", nullable: false),
+                    ConsentType = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: false, defaultValue: "explicit")
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     Status = table.Column<int>(type: "int", nullable: false),
                     CreatedByUserId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
                     ReviewedByUserId = table.Column<Guid>(type: "char(36)", nullable: true, collation: "ascii_general_ci"),
@@ -180,6 +182,10 @@ namespace TPSSO.Infrastructure.Migrations
                         .Annotation("MySql:CharSet", "utf8mb4"),
                     NickName = table.Column<string>(type: "varchar(50)", maxLength: 50, nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
+                    TwoFactorSecret = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    RecoveryCodes = table.Column<string>(type: "longtext", nullable: true)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
                     CreatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: false),
                     UserName = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: true)
                         .Annotation("MySql:CharSet", "utf8mb4"),
@@ -260,6 +266,28 @@ namespace TPSSO.Infrastructure.Migrations
                         column: x => x.ApplicationId,
                         principalTable: "Applications",
                         principalColumn: "Id");
+                })
+                .Annotation("MySql:CharSet", "utf8mb4");
+
+            migrationBuilder.CreateTable(
+                name: "ClientGrantTypes",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    ClientApplicationId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                    GrantType = table.Column<string>(type: "varchar(100)", maxLength: 100, nullable: false)
+                        .Annotation("MySql:CharSet", "utf8mb4"),
+                    CreatedAt = table.Column<DateTime>(type: "datetime(6)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ClientGrantTypes", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ClientGrantTypes_ClientApplications_ClientApplicationId",
+                        column: x => x.ClientApplicationId,
+                        principalTable: "ClientApplications",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
 
@@ -530,6 +558,11 @@ namespace TPSSO.Infrastructure.Migrations
                 column: "Status");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ClientGrantTypes_ClientApplicationId",
+                table: "ClientGrantTypes",
+                column: "ClientApplicationId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ClientRedirectUris_ClientApplicationId",
                 table: "ClientRedirectUris",
                 column: "ClientApplicationId");
@@ -624,6 +657,9 @@ namespace TPSSO.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "ClientGrantTypes");
+
             migrationBuilder.DropTable(
                 name: "ClientRedirectUris");
 
