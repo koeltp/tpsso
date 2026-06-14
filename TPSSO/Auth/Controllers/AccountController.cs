@@ -12,13 +12,11 @@ namespace TPSSO.Auth.Controllers;
 [IgnoreAntiforgeryToken]
 public class AccountController : ControllerBase
 {
-    ILogger<AccountController> _logger;
     private readonly IAccountService _accountService;
     private readonly SignInManager<User> _signInManager;
 
-    public AccountController(ILogger<AccountController> logger, IAccountService accountService, SignInManager<User> signInManager)
+    public AccountController(IAccountService accountService, SignInManager<User> signInManager)
     {
-        _logger = logger;
         _accountService = accountService;
         _signInManager = signInManager;
     }
@@ -29,7 +27,6 @@ public class AccountController : ControllerBase
     [HttpPost("login")]
     public async Task<ResponseResult<LoginResult>> Login([FromBody] LoginModel model)
     {
-        _logger.LogInformation("用户登录，用户名：{Username}。", model.Username);
         var data = await _accountService.LoginAsync(model);
         return new ResponseResult<LoginResult>(data);
     }
@@ -40,9 +37,8 @@ public class AccountController : ControllerBase
     [HttpPost("logout")]
     public async Task<StatusResponseResult> Logout()
     {
-        _logger.LogInformation("用户登出。");
         await _accountService.LogoutAsync();
-        return StatusResponseResult.Success("已登出");
+        return StatusResponseResult.Success("已退出");
     }
 
     /// <summary>
