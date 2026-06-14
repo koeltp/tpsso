@@ -36,7 +36,7 @@ function showErrorWithTrace(message: string, correlationId?: string) {
 }
 
 // 暴露复制函数给内联 onclick 调用
-;(window as unknown as Record<string, unknown>).__copyTraceId__ = copyCorrelationId
+; (window as unknown as Record<string, unknown>).__copyTraceId__ = copyCorrelationId
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '',
@@ -74,11 +74,20 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config
+    const response = error.response;
+
+    // 读取响应体中的消息（如果有）
+    const errorData = response?.data as ResponseResult | undefined;
+    const errorMessage = errorData?.message || '请求失败';
+    const correlationId = errorData?.correlationId;
+
+
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       const userStore = useUserStore()
 
       if (!userStore.refreshToken) {
+        showErrorWithTrace(errorMessage || '未授权，请重新登录', correlationId);
         userStore.logout()
         return Promise.reject(error)
       }
@@ -93,16 +102,16 @@ api.interceptors.response.use(
       }
 
       // 刷新失败，logout 内部会 clearAuth 并跳转登录页
+      showErrorWithTrace(errorMessage || '登录已过期，请重新登录', correlationId);
       userStore.logout()
       return Promise.reject(error)
     }
 
     if (!error.response) {
       ElMessage.error('网络连接失败，请检查网络')
-    } else if (error.response?.status !== 401) {
-      const errorData = error.response.data as ResponseResult | undefined
-      const message = errorData?.message || '网络错误'
-      showErrorWithTrace(message, errorData?.correlationId)
+    }
+    else if (error.response?.status !== 401) {
+      showErrorWithTrace(errorMessage || '请求失败', correlationId)
     }
 
     return Promise.reject(error)
