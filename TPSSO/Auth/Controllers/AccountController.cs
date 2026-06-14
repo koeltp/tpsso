@@ -1,7 +1,9 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Taipi.Core.RQRS;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;
+using TPSSO.Domain.Entities;
 
 namespace TPSSO.Auth.Controllers;
 
@@ -12,11 +14,13 @@ public class AccountController : ControllerBase
 {
     ILogger<AccountController> _logger;
     private readonly IAccountService _accountService;
+    private readonly SignInManager<User> _signInManager;
 
-    public AccountController(ILogger<AccountController> logger, IAccountService accountService)
+    public AccountController(ILogger<AccountController> logger, IAccountService accountService, SignInManager<User> signInManager)
     {
         _logger = logger;
         _accountService = accountService;
+        _signInManager = signInManager;
     }
 
     /// <summary>
@@ -146,5 +150,42 @@ public class AccountController : ControllerBase
     {
         var data = await _accountService.RegenerateRecoveryCodesAsync(User);
         return new ResponseResult<List<string>>(data);
+    }
+
+    // ──────── 外部登录绑定 ────────
+
+    /// <summary>
+    /// 获取当前用户的第三方登录绑定列表
+    /// </summary>
+    [HttpGet("external-logins")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<ResponseResult<List<ExternalLoginProvider>>> GetExternalLogins()
+    {
+        var data = await _accountService.GetExternalLoginsAsync(User);
+        return new ResponseResult<List<ExternalLoginProvider>>(data);
+    }
+
+    /// <summary>
+    /// 发起绑定第三方登录（302重定向到第三方授权页）
+    /// </summary>
+    [HttpGet("external-login/{provider}/bind")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public IActionResult BindExternalLogin(string provider)
+    {
+        // 构造绑定回调URL，通过 mode=bind 区分绑定和登录
+        var callbackUrl = Url.Action("CallbackBind", "ExternalLogin", null, Request.Scheme);
+        var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, callbackUrl);
+        return Challenge(properties, provider);
+    }
+
+    /// <summary>
+    /// 解绑第三方登录
+    /// </summary>
+    [HttpDelete("external-login/{provider}")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<StatusResponseResult> RemoveExternalLogin(string provider)
+    {
+        await _accountService.RemoveExternalLoginAsync(User, provider);
+        return StatusResponseResult.Success("已解绑");
     }
 }

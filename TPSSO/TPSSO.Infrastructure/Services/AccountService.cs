@@ -1,12 +1,14 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Taipi.Core.Exceptions;
 using TPSSO.Application.Exceptions;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;
 using TPSSO.Domain.Entities;
+using TPSSO.Infrastructure.Data;
 
 namespace TPSSO.Infrastructure.Services;
 
@@ -17,6 +19,7 @@ public class AccountService : IAccountService
 {
     private readonly SignInManager<User> _signInManager;
     private readonly UserManager<User> _userManager;
+    private readonly ApplicationDbContext _dbContext;
     private readonly IVerificationCodeService _verificationCodeService;
     private readonly IEmailService _emailService;
     private readonly IConfigService _configService;
@@ -26,6 +29,7 @@ public class AccountService : IAccountService
     public AccountService(
         SignInManager<User> signInManager,
         UserManager<User> userManager,
+        ApplicationDbContext dbContext,
         IVerificationCodeService verificationCodeService,
         IEmailService emailService,
         IConfigService configService,
@@ -34,6 +38,7 @@ public class AccountService : IAccountService
     {
         _signInManager = signInManager;
         _userManager = userManager;
+        _dbContext = dbContext;
         _verificationCodeService = verificationCodeService;
         _emailService = emailService;
         _configService = configService;
@@ -359,6 +364,59 @@ public class AccountService : IAccountService
         _logger.LogInformation("用户重新生成恢复码，UserId={UserId}", user.Id);
 
         return recoveryCodes;
+    }
+
+    // ──────── 外部登录绑定 ────────
+
+    public async Task<List<ExternalLoginProvider>> GetExternalLoginsAsync(ClaimsPrincipal principal)
+    {
+        var user = await _userManager.GetUserAsync(principal);
+        if (user == null)
+            throw new AppException(AppCodes.UserNotFound, "用户不存在");
+
+        // 查询系统已启用的第三方登录 Provider
+        var enabledProviders = await _dbContext.DictTypes
+            .Where(t => t.Parent != null && t.Parent.Code == "OAuth" && t.IsEnabled)
+            .Where(t => t.Items.Any(i => i.Key == "IsEnabled" && i.Value == "true" && i.IsEnabled))
+            .Select(t => new { t.Code, t.Name })
+            .ToListAsync();
+
+        // 查询用户已绑定的外部登录
+        var userLogins = await _userManager.GetLoginsAsync(user);
+        var boundLogins = userLogins.ToDictionary(l => l.LoginProvider, l => l.ProviderDisplayName);
+
+        return enabledProviders.Select(p => new ExternalLoginProvider
+        {
+            Scheme = p.Code,
+            DisplayName = p.Name,
+            IsBound = boundLogins.ContainsKey(p.Code),
+            BoundDisplayName = boundLogins.GetValueOrDefault(p.Code)
+        }).ToList();
+    }
+
+    public async Task RemoveExternalLoginAsync(ClaimsPrincipal principal, string provider)
+    {
+        var user = await _userManager.GetUserAsync(principal);
+        if (user == null)
+            throw new AppException(AppCodes.UserNotFound, "用户不存在");
+
+        var logins = await _userManager.GetLoginsAsync(user);
+        var targetLogin = logins.FirstOrDefault(l => l.LoginProvider == provider);
+        if (targetLogin == null)
+            throw new AppException(AppCodes.InvalidParameter, $"未绑定 {provider} 账号");
+
+        // 安全校验：至少保留一种登录方式（密码或其他第三方登录）
+        var hasPassword = await _userManager.HasPasswordAsync(user);
+        var otherLogins = logins.Where(l => l.LoginProvider != provider).ToList();
+
+        if (!hasPassword && otherLogins.Count == 0)
+            throw new AppException(AppCodes.InvalidParameter, "至少需要保留一种登录方式，请先设置密码后再解绑");
+
+        var result = await _userManager.RemoveLoginAsync(user, targetLogin.LoginProvider, targetLogin.ProviderKey);
+        if (!result.Succeeded)
+            throw new AppException(AppCodes.InvalidParameter, string.Join("；", result.Errors.Select(e => e.Description)));
+
+        _logger.LogInformation("用户解绑第三方登录：UserId={UserId}, Provider={Provider}", user.Id, provider);
     }
 
     // ──────── 私有方法 ────────

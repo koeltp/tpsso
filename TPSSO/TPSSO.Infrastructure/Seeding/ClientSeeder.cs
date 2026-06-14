@@ -38,17 +38,21 @@ public class ClientSeeder
     {
         _logger.LogInformation("===== 开始执行种子数据初始化 =====");
 
-        if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
-        {
-            await _context.Database.EnsureDeletedAsync();
-            await _context.Database.EnsureCreatedAsync();
-        }
-        else
-        {
+        // if (Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development")
+        // {
+        //     await _context.Database.EnsureDeletedAsync();
+        //     await _context.Database.EnsureCreatedAsync();
+        // }
+        // else
+        // {
+        //     _logger.LogInformation("生产环境：执行数据库迁移...");
+        //     await _context.Database.MigrateAsync();
+        //     _logger.LogInformation("数据库迁移完成");
+        // }
+
             _logger.LogInformation("生产环境：执行数据库迁移...");
             await _context.Database.MigrateAsync();
             _logger.LogInformation("数据库迁移完成");
-        }
 
         // ──────── Scopes ────────
 

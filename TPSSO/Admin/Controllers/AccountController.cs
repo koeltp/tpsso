@@ -144,4 +144,28 @@ public class AccountController : ControllerBase
         var data = await _accountService.RegenerateRecoveryCodesAsync(User);
         return new ResponseResult<List<string>>(data);
     }
+
+    // ──────── 外部登录绑定 ────────
+
+    /// <summary>
+    /// 获取当前用户的第三方登录绑定列表
+    /// </summary>
+    [HttpGet("external-logins")]
+    [Authorize]
+    public async Task<ResponseResult<List<ExternalLoginProvider>>> GetExternalLogins()
+    {
+        var data = await _accountService.GetExternalLoginsAsync(User);
+        return new ResponseResult<List<ExternalLoginProvider>>(data);
+    }
+
+    /// <summary>
+    /// 解绑第三方登录
+    /// </summary>
+    [HttpDelete("external-login/{provider}")]
+    [Authorize]
+    public async Task<StatusResponseResult> RemoveExternalLogin(string provider)
+    {
+        await _accountService.RemoveExternalLoginAsync(User, provider);
+        return StatusResponseResult.Success("已解绑");
+    }
 }

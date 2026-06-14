@@ -171,6 +171,79 @@ public class ExternalLoginController : ControllerBase
     }
 
     /// <summary>
+    /// GET /api/external-login/callback-bind - 第三方登录绑定回调
+    /// 已登录用户绑定第三方账号时使用，通过回调URL区分绑定和登录场景
+    /// </summary>
+    [HttpGet("api/external-login/callback-bind")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> CallbackBind(string? remoteError = null)
+    {
+        var adminUrl = _ssoOptions.LoginBaseUrl.Replace("auth.taipi.top", "admin.taipi.top")
+            .Replace("localhost:3010", "localhost:3009");
+        var profileUrl = $"{adminUrl}/account/profile?tab=external";
+
+        // 第三方授权出错
+        if (remoteError != null)
+        {
+            _logger.LogWarning("绑定外部登录出错：{Error}", remoteError);
+            return Redirect($"{profileUrl}&bindError={Uri.EscapeDataString($"绑定失败：{remoteError}")}");
+        }
+
+        // 获取外部登录信息
+        var info = await _signInManager.GetExternalLoginInfoAsync();
+        if (info == null)
+        {
+            _logger.LogWarning("绑定回调：无法获取外部登录信息");
+            return Redirect($"{profileUrl}&bindError={Uri.EscapeDataString("无法获取外部登录信息")}");
+        }
+
+        var provider = info.LoginProvider;
+        var providerKey = info.ProviderKey;
+        var displayName = info.Principal.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value ?? provider;
+
+        _logger.LogInformation("绑定回调：Provider={Provider}, ProviderKey={ProviderKey}", provider, providerKey);
+
+        // 检查该第三方账号是否已被其他用户绑定
+        var existingUser = await _userManager.FindByLoginAsync(provider, providerKey);
+        if (existingUser != null)
+        {
+            return Redirect($"{profileUrl}&bindError={Uri.EscapeDataString($"该 {provider} 账号已被其他用户绑定")}");
+        }
+
+        // 获取当前登录用户
+        var currentUser = await _userManager.GetUserAsync(User);
+        if (currentUser == null)
+        {
+            return Redirect($"{profileUrl}&bindError={Uri.EscapeDataString("请先登录")}");
+        }
+
+        // 检查当前用户是否已绑定该Provider
+        var logins = await _userManager.GetLoginsAsync(currentUser);
+        if (logins.Any(l => l.LoginProvider == provider))
+        {
+            return Redirect($"{profileUrl}&bindError={Uri.EscapeDataString($"已绑定 {provider} 账号")}");
+        }
+
+        // 关联外部登录到当前用户
+        var addLoginResult = await _userManager.AddLoginAsync(currentUser, new UserLoginInfo(provider, providerKey, displayName));
+        if (!addLoginResult.Succeeded)
+        {
+            var errors = string.Join("；", addLoginResult.Errors.Select(e => e.Description));
+            return Redirect($"{profileUrl}&bindError={Uri.EscapeDataString($"绑定失败：{errors}")}");
+        }
+
+        _logger.LogInformation("用户 {UserId} 绑定 {Provider} 成功", currentUser.Id, provider);
+
+        // 清除外部认证Cookie
+        await _signInManager.SignOutAsync();
+
+        // 重新登录当前用户（因为 SignOutAsync 会清除登录状态）
+        await _signInManager.SignInAsync(currentUser, isPersistent: true);
+
+        return Redirect($"{profileUrl}&bindSuccess={Uri.EscapeDataString(provider)}");
+    }
+
+    /// <summary>
     /// 登录成功后重定向到前端，继续 OAuth 授权流程或跳转管理后台
     /// </summary>
     private IActionResult RedirectAfterLogin(string? returnUrl)

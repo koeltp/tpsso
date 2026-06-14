@@ -61,3 +61,28 @@ export const disableTwoFactor = (): Promise<boolean> => {
 export const resetRecoveryCodes = (): Promise<string[]> => {
   return api.post('/api/account/2fa/reset-codes')
 }
+
+// ──────── 外部登录绑定 ────────
+
+export interface ExternalLoginProvider {
+  scheme: string
+  displayName: string
+  isBound: boolean
+  boundDisplayName?: string
+}
+
+/** 获取第三方登录绑定列表 */
+export const getExternalLogins = (): Promise<ExternalLoginProvider[]> => {
+  return api.get('/api/account/external-logins')
+}
+
+/** 获取绑定第三方登录的跳转URL（Auth项目） */
+export const getBindExternalLoginUrl = (provider: string): string => {
+  const authApiUrl = import.meta.env.VITE_AUTH_API_URL || ''
+  return `${authApiUrl}/api/account/external-login/${provider}/bind`
+}
+
+/** 解绑第三方登录 */
+export const removeExternalLogin = (provider: string): Promise<boolean> => {
+  return api.delete(`/api/account/external-login/${provider}`)
+}

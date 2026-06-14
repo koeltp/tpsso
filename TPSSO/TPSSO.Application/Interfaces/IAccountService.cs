@@ -83,4 +83,14 @@ public interface IAccountService
     /// 生成新的恢复码（已启用2FA时重新生成）
     /// </summary>
     Task<List<string>> RegenerateRecoveryCodesAsync(ClaimsPrincipal principal);
+
+    /// <summary>
+    /// 获取当前用户已绑定的第三方登录列表（含所有可用Provider及绑定状态）
+    /// </summary>
+    Task<List<ExternalLoginProvider>> GetExternalLoginsAsync(ClaimsPrincipal principal);
+
+    /// <summary>
+    /// 解绑第三方登录（安全校验：至少保留一种登录方式）
+    /// </summary>
+    Task RemoveExternalLoginAsync(ClaimsPrincipal principal, string provider);
 }
