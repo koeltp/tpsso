@@ -6,7 +6,7 @@
 
   <!-- 客户端信息卡片 -->
   <div class="app-info-card" v-if="appName">
-    <el-avatar v-if="appLogo" :src="getFullUrl(appLogo)" :size="48" shape="square" class="app-logo" />
+    <el-avatar v-if="appLogo" :src="appLogo" :size="48" shape="square" class="app-logo" />
     <el-avatar v-else :size="48" shape="square" class="app-logo-placeholder">{{ appName.charAt(0) }}</el-avatar>
     <div class="app-info-text">
       <strong class="app-name">{{ appName }}</strong>
@@ -51,14 +51,6 @@ const appName = computed(() => (route.query.app_name as string) || '未知应用
 const appLogo = computed(() => (route.query.app_logo as string) || '')
 const appDesc = computed(() => (route.query.app_desc as string) || '')
 const loading = ref(false)
-
-/** 拼接完整 URL（Logo 可能是相对路径） */
-const getFullUrl = (url: string) => {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  const base = import.meta.env.VITE_API_BASE_URL || ''
-  return base + url
-}
 
 const scopeMap: Record<string, { label: string; icon: typeof User; required?: boolean }> = {
   openid: { label: '你的身份标识', icon: User, required: true },

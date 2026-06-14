@@ -48,7 +48,7 @@
         <el-table-column type="index" label="序号" width="70" align="center" />
         <el-table-column label="Logo" width="70" align="center">
           <template #default="{ row }">
-            <el-avatar v-if="row.logo" :src="getFullUrl(row.logo)" :size="32" shape="square" />
+            <el-avatar v-if="row.logo" :src="row.logo" :size="32" shape="square" />
             <el-avatar v-else :size="32" shape="square" class="logo-placeholder">{{ row.name?.charAt(0) || '?' }}</el-avatar>
           </template>
         </el-table-column>
@@ -105,7 +105,7 @@
       <template v-if="detail">
         <el-descriptions :column="1" border>
           <el-descriptions-item label="Logo">
-            <el-avatar v-if="detail.logo" :src="getFullUrl(detail.logo)" :size="48" shape="square" />
+            <el-avatar v-if="detail.logo" :src="detail.logo" :size="48" shape="square" />
             <span v-else class="text-muted">未设置</span>
           </el-descriptions-item>
           <el-descriptions-item label="应用名称">{{ detail.name }}</el-descriptions-item>
@@ -293,14 +293,6 @@ const handleDelete = async (id: string) => {
 }
 
 onMounted(fetchClients)
-
-/** 拼接完整 URL（Logo 可能是相对路径） */
-const getFullUrl = (url: string) => {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  const base = import.meta.env.VITE_API_BASE_URL || ''
-  return base + url
-}
 </script>
 
 <style scoped>

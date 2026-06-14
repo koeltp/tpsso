@@ -36,7 +36,7 @@ function showErrorWithTrace(message: string, correlationId?: string) {
 }
 
 // 暴露复制函数给内联 onclick 调用
-; (window as unknown as Record<string, unknown>).__copyTraceId__ = copyCorrelationId
+;(window as unknown as Record<string, unknown>).__copyTraceId__ = copyCorrelationId
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '',
@@ -74,47 +74,41 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config
-    const response = error.response;
+    const response = error.response
+    const errorData = response?.data as ResponseResult | undefined
+    const errorMessage = errorData?.message || '请求失败'
+    const correlationId = errorData?.correlationId
 
-    // 读取响应体中的消息（如果有）
-    const errorData = response?.data as ResponseResult | undefined;
-    const errorMessage = errorData?.message || '请求失败';
-    const correlationId = errorData?.correlationId;
-
-
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // 401 且未重试过：尝试刷新 token
+    if (response?.status === 401 && !originalRequest._retry) {
       const userStore = useUserStore()
 
+      // 没有 refreshToken 时直接登出
       if (!userStore.refreshToken) {
-        showErrorWithTrace(errorMessage || '未授权，请重新登录', correlationId);
+        showErrorWithTrace(errorMessage || '未授权，请重新登录', correlationId)
         userStore.logout()
         return Promise.reject(error)
       }
 
       originalRequest._retry = true
-
-      // Store 的 refreshAccessToken 已有单例锁，防止并发刷新
       const newToken = await userStore.refreshAccessToken()
+
       if (newToken) {
         originalRequest.headers.Authorization = `Bearer ${newToken}`
-        return api(originalRequest)
+        return api(originalRequest) // 重试原始请求
       }
 
-      // 刷新失败，logout 内部会 clearAuth 并跳转登录页
-      showErrorWithTrace(errorMessage || '登录已过期，请重新登录', correlationId);
+      // 刷新失败：显示错误并登出
+      showErrorWithTrace(errorMessage || '登录已过期，请重新登录', correlationId)
       userStore.logout()
       return Promise.reject(error)
     }
 
-    if (!error.response) {
+    // 其他所有错误（包括重试后仍然 401、非 401 错误、无响应等）
+    if (!response) {
       ElMessage.error('网络连接失败，请检查网络')
-    }
-    else if (error.response?.status === 401) {
-      showErrorWithTrace(errorMessage || '请求参数错误', correlationId)
-    }
-    else {
-      showErrorWithTrace(errorMessage || '请求失败', correlationId)
+    } else {
+      showErrorWithTrace(errorMessage, correlationId)
     }
 
     return Promise.reject(error)

@@ -42,7 +42,7 @@
         <el-table-column type="index" label="序号" width="70" align="center" />
         <el-table-column label="Logo" width="70" align="center">
           <template #default="{ row }">
-            <el-avatar v-if="row.logo" :src="getFullUrl(row.logo)" :size="32" shape="square" />
+            <el-avatar v-if="row.logo" :src="row.logo" :size="32" shape="square" />
             <el-avatar v-else :size="32" shape="square" class="logo-placeholder">{{ row.name?.charAt(0) || '?' }}</el-avatar>
           </template>
         </el-table-column>
@@ -95,7 +95,7 @@
               :http-request="handleLogoUpload"
               accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
             >
-              <el-avatar v-if="clientForm.logo" :src="getFullUrl(clientForm.logo)" :size="64" shape="square" />
+              <el-avatar v-if="clientForm.logo" :src="clientForm.logo" :size="64" shape="square" />
               <div v-else class="logo-upload-placeholder">
                 <el-icon :size="24"><Plus /></el-icon>
                 <span>上传Logo</span>
@@ -118,7 +118,7 @@
         </el-form-item>
         <el-form-item label="回调地址" prop="redirectUris">
           <el-input v-model="clientForm.redirectUris" type="textarea" :rows="3"
-            placeholder="每行一个回调地址，例如：&#10;http://localhost:3000/callback&#10;https://example.com/callback" />
+            placeholder="每行一个回调地址，例如：&#10;http://www.taipi.top/callback&#10;https://www.byteepoch.com/callback" />
         </el-form-item>
         <el-form-item label="授权范围">
           <el-checkbox-group v-model="selectedScopes">
@@ -155,7 +155,7 @@
     <el-dialog v-model="detailVisible" title="客户端详情" width="600px">
       <el-descriptions :column="1" border v-if="detailData">
         <el-descriptions-item label="Logo">
-          <el-avatar v-if="detailData.logo" :src="getFullUrl(detailData.logo)" :size="48" shape="square" />
+          <el-avatar v-if="detailData.logo" :src="detailData.logo" :size="48" shape="square" />
           <span v-else class="text-muted">未设置</span>
         </el-descriptions-item>
         <el-descriptions-item label="应用名称">{{ detailData.name }}</el-descriptions-item>
@@ -353,15 +353,6 @@ const submitForm = async () => {
   } finally {
     submitting.value = false
   }
-}
-
-/** 拼接完整 URL（Logo 可能是相对路径） */
-const getFullUrl = (url: string) => {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  // 相对路径拼接 Admin API 基地址
-  const base = import.meta.env.VITE_API_BASE_URL || ''
-  return base + url
 }
 
 /** Logo 上传前校验 */

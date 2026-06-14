@@ -31,9 +31,10 @@ services:
     ports:
       - "7089:80"
     volumes:
-      - admin_uploads:/app/wwwroot/avatars
+      - ./uploads/avatars:/app/wwwroot/avatars   # 头像目录
+      - ./uploads/logos:/app/wwwroot/logos       # Logo 目录
       - ./config/adminapi/appsettings.Production.json:/app/appsettings.Production.json:ro
-      - ./logs/adminapi:/app/logs
+      - ./logs/adminapi:/app/logs                # 日志目录
     depends_on:
       - authapi
     networks:
@@ -80,9 +81,6 @@ services:
       - saas
       - app
 # ==================== 数据卷 ====================
-volumes:
-  admin_uploads:
-    driver: local
 
 # ==================== 网络 ====================
 networks:
