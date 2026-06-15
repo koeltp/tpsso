@@ -1,7 +1,7 @@
-using Microsoft.Extensions.Hosting;
 using Serilog;
 using Taipi.Core;
 using Taipi.Core.Extensions;
+using TPSSO.Application.Models;
 using TPSSO.Auth.Extensions;
 using TPSSO.Auth.Middleware;
 using TPSSO.Application.Exceptions;
@@ -35,8 +35,16 @@ try
         options.NotFoundCode = AppCodes.SystemNotFound;
         options.UnknownErrorCode = AppCodes.SystemError;
     });
-    builder.Services.AddControllers();
+    builder.Services.AddControllers()
+        .AddJsonOptions(options =>
+        {
+            // EF Core 从数据库读取的 DateTime.Kind 为 Unspecified，序列化时不会带 Z 后缀
+            // 配置为将 Unspecified 的 DateTime 视为 UTC，确保前端能正确转为本地时间
+            options.JsonSerializerOptions.Converters.Add(new DateTimeUtcConverter());
+        });
     builder.Services.AddOpenApi();
+    // 速率限制
+    builder.Services.AddTaiPiRateLimiting();
     //当环境变量不是 "true" 时添加（包括未设置或为 "false"）
     if (Environment.GetEnvironmentVariable("DOTNET_HOSTBUILDER__DESIGN_TIME") != "true")
     {
@@ -59,6 +67,7 @@ try
     app.UseHttpsRedirection();
     app.UseStaticFiles();
     app.UseCors();
+    app.UseRateLimiter();
     app.UseAuthentication();
     app.UseAuthorization();
     app.MapControllers();

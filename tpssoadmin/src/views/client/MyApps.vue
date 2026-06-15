@@ -36,7 +36,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getMyAuthorizations, revokeAuthorization, type AuthorizationResult } from '@/api/client'
-import { formatDate } from '@/utils/client'
+import { formatDate } from '@/utils/format'
 
 const loading = ref(false)
 const authorizations = ref<AuthorizationResult[]>([])

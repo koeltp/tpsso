@@ -3,6 +3,7 @@ using Serilog;
 using Taipi.Core;
 using Taipi.Core.Extensions;
 using TPSSO.Admin.Extensions;
+using TPSSO.Application.Models;
 using TPSSO.Admin.Middleware;
 using TPSSO.Application.Exceptions;
 
@@ -33,7 +34,11 @@ try
         options.NotFoundCode = AppCodes.SystemNotFound;
         options.UnknownErrorCode = AppCodes.SystemError;
     });
-    builder.Services.AddControllers();
+    builder.Services.AddControllers()
+        .AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.Converters.Add(new DateTimeUtcConverter());
+        });
     builder.Services.AddOpenApi();
 
     var app = builder.Build();

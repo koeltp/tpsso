@@ -78,7 +78,7 @@ export const getExternalLogins = (): Promise<ExternalLoginProvider[]> => {
 
 /** 获取绑定第三方登录的跳转URL（Auth项目） */
 export const getBindExternalLoginUrl = (provider: string): string => {
-  const authApiUrl = import.meta.env.VITE_AUTH_API_URL || ''
+  const authApiUrl = import.meta.env.VITE_SSO_URL || ''
   return `${authApiUrl}/api/account/external-login/${provider}/bind`
 }
 

@@ -154,6 +154,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { lockUser, unlockUser, updateUserRoles, resetUserPassword, getRoles, type UserResult, type RoleResult } from '@/api/user'
 import { roleLabel, roleTagType } from '@/utils/client'
+import { formatDate } from '@/utils/format'
 import { useUserManageStore } from '@/stores/userManage'
 
 const userManageStore = useUserManageStore()
@@ -177,12 +178,6 @@ const fetchRoles = async () => {
   } catch {
     // 拦截器已处理
   }
-}
-
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return d.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
 }
 
 const handleSearch = () => {

@@ -157,7 +157,8 @@ import {
   approveClient, rejectClient, deleteClient, getClientById,
   type ClientResult
 } from '@/api/client'
-import { statusTagType, statusLabel, formatDate } from '@/utils/client'
+import { statusTagType, statusLabel } from '@/utils/client'
+import { formatDate } from '@/utils/format'
 import { useClientStore } from '@/stores/client'
 
 /** 授权类型中文标签 */

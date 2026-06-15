@@ -1,4 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using TPSSO.Application.Interfaces;
+using TPSSO.Infrastructure.Data;
 
 namespace TPSSO.Auth.Middleware;
 
@@ -12,9 +14,10 @@ public static class StartupConfigValidator
     {
         using var scope = services.CreateScope();
         var configService = scope.ServiceProvider.GetRequiredService<IConfigService>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         // 检查第三方登录配置
-        await ValidateOAuthProviders(configService, logger);
+        await ValidateOAuthProviders(dbContext, configService, logger);
 
         // 检查邮件配置
         await ValidateSmtpConfig(configService, logger);
@@ -23,11 +26,21 @@ public static class StartupConfigValidator
     }
 
     /// <summary>
-    /// 检查已启用的第三方登录 Provider 是否配置了 ClientId/ClientSecret
+    /// 从数据库动态查询已启用的 OAuth Provider，校验其 ClientId/ClientSecret 是否配置完整
     /// </summary>
-    private static async Task ValidateOAuthProviders(IConfigService configService, ILogger logger)
+    private static async Task ValidateOAuthProviders(ApplicationDbContext dbContext, IConfigService configService, ILogger logger)
     {
-        var providers = new[] { "GitHub", "Google", "WeChat" };
+        // 查询 OAuth 父分类下所有已启用的子分类 Code（如 GitHub、Google、WeChat）
+        var providers = await dbContext.DictTypes
+            .Where(t => t.Parent != null && t.Parent.Code == "OAuth" && t.IsEnabled)
+            .Select(t => t.Code)
+            .ToListAsync();
+
+        if (providers.Count == 0)
+        {
+            logger.LogInformation("配置校验：未启用任何第三方登录 Provider");
+            return;
+        }
 
         foreach (var provider in providers)
         {

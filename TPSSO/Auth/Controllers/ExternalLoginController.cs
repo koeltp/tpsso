@@ -1,11 +1,16 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Taipi.Core.Extensions;
+using Taipi.Core.RQRS;
 using TPSSO.Application.Interfaces;
+using TPSSO.Application.Models;
 using TPSSO.Application.Options;
 using TPSSO.Domain.Entities;
 using TPSSO.Infrastructure.Data;
+using TPSSO.Application.Exceptions;
 
 namespace TPSSO.Auth.Controllers;
 
@@ -43,20 +48,20 @@ public class ExternalLoginController : ControllerBase
     /// GET /api/external-login/providers - 获取已启用的第三方登录 Provider 列表
     /// </summary>
     [HttpGet("api/external-login/providers")]
-    public async Task<IActionResult> GetProviders()
+    public async Task<ResponseResult<List<ExternalLoginProvider>>> GetProviders()
     {
         // 查询 OAuth 父分类下的所有子分类
         var providers = await _context.DictTypes
             .Where(t => t.Parent != null && t.Parent.Code == "OAuth" && t.IsEnabled)
             .Where(t => t.Items.Any(i => i.Key == "IsEnabled" && i.Value == "true" && i.IsEnabled))
-            .Select(t => new
+            .Select(t => new ExternalLoginProvider
             {
-                scheme = t.Code,       // GitHub / Google / WeChat
-                displayName = t.Name   // GitHub / Google / 微信
+                Scheme = t.Code,       // GitHub / Google / WeChat
+                DisplayName = t.Name   // GitHub / Google / 微信
             })
             .ToListAsync();
 
-        return Ok(providers);
+        return new ResponseResult<List<ExternalLoginProvider>>(providers);
     }
 
     /// <summary>
@@ -64,13 +69,14 @@ public class ExternalLoginController : ControllerBase
     /// 前端调用此接口后，后端 302 重定向到第三方授权页
     /// </summary>
     [HttpGet("api/external-login/{provider}")]
+    [EnableRateLimiting(RateLimitPolicies.ExternalLoginEndpoint)]
     public IActionResult Challenge(string provider, [FromQuery] string? returnUrl = null)
     {
         // 验证 Provider 是否已启用
         var isEnabled = _configService.GetBoolAsync(provider, "IsEnabled").GetAwaiter().GetResult();
         if (!isEnabled)
         {
-            return BadRequest(new { error = "provider_disabled", message = $"第三方登录 {provider} 未启用" });
+            return BadRequest(StatusResponseResult.Error(AppCodes.ExternalLoginProviderDisabled, $"第三方登录 {provider} 未启用"));
         }
 
         // 构造回调 URL，把 returnUrl 传递给回调
@@ -180,7 +186,7 @@ public class ExternalLoginController : ControllerBase
     {
         var adminUrl = _ssoOptions.LoginBaseUrl.Replace("auth.taipi.top", "admin.taipi.top")
             .Replace("localhost:3010", "localhost:3009");
-        var profileUrl = $"{adminUrl}/account/profile?tab=external";
+        var profileUrl = $"{adminUrl}/profile?tab=external";
 
         // 第三方授权出错
         if (remoteError != null)

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Taipi.Core.Extensions;
 using Taipi.Core.RQRS;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Models;
@@ -14,17 +16,20 @@ public class AccountController : ControllerBase
 {
     private readonly IAccountService _accountService;
     private readonly SignInManager<User> _signInManager;
+    private readonly ILogger<AccountController> _logger;
 
-    public AccountController(IAccountService accountService, SignInManager<User> signInManager)
+    public AccountController(IAccountService accountService, SignInManager<User> signInManager, ILogger<AccountController> logger)
     {
         _accountService = accountService;
         _signInManager = signInManager;
+        _logger = logger;
     }
 
     /// <summary>
     /// 用户登录（Cookie 认证）
     /// </summary>
     [HttpPost("login")]
+    [EnableRateLimiting(RateLimitPolicies.LoginEndpoint)]
     public async Task<ResponseResult<LoginResult>> Login([FromBody] LoginModel model)
     {
         var data = await _accountService.LoginAsync(model);
@@ -56,6 +61,7 @@ public class AccountController : ControllerBase
     /// 发送邮箱验证码
     /// </summary>
     [HttpPost("send-code")]
+    [EnableRateLimiting(RateLimitPolicies.LoginEndpoint)]
     public async Task<StatusResponseResult> SendCode([FromBody] SendCodeModel model)
     {
         await _accountService.SendCodeAsync(model.Email);
@@ -66,6 +72,7 @@ public class AccountController : ControllerBase
     /// 注册新用户
     /// </summary>
     [HttpPost("register")]
+    [EnableRateLimiting(RateLimitPolicies.LoginEndpoint)]
     public async Task<StatusResponseResult> Register([FromBody] RegisterModel model)
     {
         await _accountService.RegisterAsync(model);
@@ -76,6 +83,7 @@ public class AccountController : ControllerBase
     /// 发送重置密码验证码
     /// </summary>
     [HttpPost("send-reset-code")]
+    [EnableRateLimiting(RateLimitPolicies.LoginEndpoint)]
     public async Task<StatusResponseResult> SendResetCode([FromBody] SendCodeModel model)
     {
         await _accountService.SendResetCodeAsync(model.Email);
@@ -170,6 +178,7 @@ public class AccountController : ControllerBase
     {
         // 构造绑定回调URL，通过 mode=bind 区分绑定和登录
         var callbackUrl = Url.Action("CallbackBind", "ExternalLogin", null, Request.Scheme);
+        _logger.LogInformation("Binding external login {Provider} to user {User}", provider, User.Identity?.Name);
         var properties = _signInManager.ConfigureExternalAuthenticationProperties(provider, callbackUrl);
         return Challenge(properties, provider);
     }

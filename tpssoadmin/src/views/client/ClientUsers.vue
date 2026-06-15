@@ -56,7 +56,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Search, ArrowLeft } from '@element-plus/icons-vue'
 import { getClientAuthorizedUsers, getClientById, type AuthorizedUserResult } from '@/api/client'
-import { formatDate } from '@/utils/client'
+import { formatDate } from '@/utils/format'
 
 const router = useRouter()
 const route = useRoute()

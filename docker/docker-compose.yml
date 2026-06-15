@@ -4,6 +4,11 @@ services:
     image: registry.cn-shenzhen.aliyuncs.com/tmd/sso:authapi
     container_name: authapi
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:80
@@ -25,6 +30,11 @@ services:
     image: registry.cn-shenzhen.aliyuncs.com/tmd/sso:adminapi
     container_name: adminapi
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:80
@@ -47,6 +57,11 @@ services:
     image: registry.cn-shenzhen.aliyuncs.com/tmd/sso:authweb
     container_name: authweb
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "7087:80"
     depends_on:
@@ -61,6 +76,11 @@ services:
     image: registry.cn-shenzhen.aliyuncs.com/tmd/sso:adminweb
     container_name: adminweb
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "7088:80"
     depends_on:
@@ -76,6 +96,11 @@ services:
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARED_TOKEN_SSO}
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - infrastructure
       - saas

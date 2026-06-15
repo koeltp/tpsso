@@ -54,7 +54,7 @@ public class ConfigService : IConfigService
         return await _context.DictItems
             .Include(i => i.Type)
             .FirstOrDefaultAsync(i =>
-                i.Type.Code == typeCode &&
+                i.Type!.Code == typeCode &&
                 i.Key == key &&
                 i.IsEnabled &&
                 i.Type.IsEnabled);

@@ -207,7 +207,8 @@ import {
   submitClient, withdrawClient, getClientById, regenerateClientSecret, uploadClientLogo,
   type ClientResult
 } from '@/api/client'
-import { statusTagType, statusLabel, formatDate } from '@/utils/client'
+import { statusTagType, statusLabel } from '@/utils/client'
+import { formatDate } from '@/utils/format'
 
 const router = useRouter()
 const loading = ref(false)

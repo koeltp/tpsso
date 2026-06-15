@@ -39,8 +39,3 @@ export function statusLabel(status: string): string {
     default: return status
   }
 }
-
-/** 格式化日期为本地字符串 */
-export function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleString('zh-CN')
-}

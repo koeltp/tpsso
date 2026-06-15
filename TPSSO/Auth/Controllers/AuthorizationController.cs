@@ -2,12 +2,14 @@ using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 using System.Security.Claims;
+using Taipi.Core.Extensions;
 using TPSSO.Application.Options;
 using TPSSO.Domain.Entities;
 using TPSSO.Infrastructure.Data;
@@ -250,6 +252,7 @@ public class AuthorizationController : ControllerBase
     /// POST /connect/token - 处理所有授权类型的 Token 请求
     /// </summary>
     [HttpPost("token")]
+    [EnableRateLimiting(RateLimitPolicies.TokenEndpoint)]
     public async Task<IActionResult> Exchange()
     {
         var request = HttpContext.GetOpenIddictServerRequest();

@@ -44,6 +44,10 @@ public static class AppCodes
     public const int DictCodeExists = 170002;
     public const int DictItemNotFound = 170003;
     public const int DictParentSelf = 170004;
+    /// <summary>
+    /// 第三方登录 Provider 未启用
+    /// </summary>
+    public const int ExternalLoginProviderDisabled = 170005;
 
     // ── 上传 180 ──
     public const int UploadEmpty = 180001;

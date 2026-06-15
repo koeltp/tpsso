@@ -4,7 +4,6 @@ using OpenIddict.Abstractions;
 using TPSSO.Domain.Entities;
 using TPSSO.Infrastructure.Data;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Hosting;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace TPSSO.Infrastructure.Seeding;
@@ -16,8 +15,7 @@ public class ClientSeeder(
     ApplicationDbContext context,
     IOpenIddictApplicationManager manager,
     UserManager<User> userManager,
-    ILogger<ClientSeeder> logger,
-    IHostEnvironment environment)
+    ILogger<ClientSeeder> logger)
 {
 
     private static readonly ClientSeedConfig[] ClientConfigs =
