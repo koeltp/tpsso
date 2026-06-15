@@ -15,12 +15,4 @@ public static class MiddlewareExtensions
     {
         return app.UseTaiPiExceptionHandling();
     }
-
-    /// <summary>
-    /// 注册请求日志中间件（CorrelationId + 耗时 + 状态码）
-    /// </summary>
-    public static IApplicationBuilder UseRequestLogging(this IApplicationBuilder app)
-    {
-        return app.UseMiddleware<RequestLoggingMiddleware>();
-    }
 }

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Taipi.Core;
+using Taipi.Core.Extensions;
 using TPSSO.Auth.Extensions;
 using TPSSO.Auth.Middleware;
 using TPSSO.Application.Exceptions;
@@ -46,6 +47,7 @@ try
 
     // 中间件管道
     app.UseExceptionHandling();
+    app.UseCorrelationId();
     app.UseRequestLogging();
     app.UseForwardedHeadersConfiguration();
 

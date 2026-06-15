@@ -1,5 +1,7 @@
+using Microsoft.Extensions.Hosting;
 using Serilog;
 using Taipi.Core;
+using Taipi.Core.Extensions;
 using TPSSO.Admin.Extensions;
 using TPSSO.Admin.Middleware;
 using TPSSO.Application.Exceptions;
@@ -38,6 +40,7 @@ try
 
     // 中间件管道
     app.UseExceptionHandling();
+    app.UseCorrelationId();
     app.UseRequestLogging();
 
     if (app.Environment.IsDevelopment())
@@ -54,7 +57,7 @@ try
 
     app.Run();
 }
-catch (Exception ex)
+catch (Exception ex) when (ex is not HostAbortedException)
 {
     Log.Fatal(ex, "TPSSO.Admin 服务异常终止");
 }
