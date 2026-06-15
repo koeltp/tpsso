@@ -72,23 +72,24 @@
 
     <h2>后端分层架构</h2>
     <el-card shadow="never" class="code-card">
-      <pre>Auth/Admin (API 层)           → Controller：HTTP 请求处理
-    ↓
+      <pre>Auth/Admin ──→ Application ──→ Domain
+    │              ↑
+    └──→ Infrastructure ──────┘
+
+Auth/Admin (API 层 / 组合根)  → Controller、DI 装配
 TPSSO.Application (应用层)    → 接口定义、DTO、业务编排
-    ↓
-TPSSO.Infrastructure (基础设施层) → EF Core、服务实现、加密
-    ↓
+TPSSO.Infrastructure (基础设施层) → EF Core、服务实现（实现 Application 接口）
 TPSSO.Domain (领域层)         → 实体、枚举、业务方法（零依赖）
 
 外部依赖：
-  TaiPi.Core (NuGet)          → ResponseResult、SearchPager、分页扩展等通用模型</pre>
+  TaiPi.Core (NuGet) → ResponseResult、SearchPager、分页扩展等通用模型</pre>
     </el-card>
-    <p>依赖方向只能从外向内，内层不知道外层的存在。TaiPi.Core 是外部 NuGet 包，被 Auth、Admin、Infrastructure 三层引用。</p>
+    <p>依赖倒置：Application 定义接口，Infrastructure 实现接口，Auth/Admin 作为组合根负责 DI 装配。依赖方向只能从外向内，内层不知道外层的存在。TaiPi.Core 是外部 NuGet 包，被 Application、Infrastructure、Auth、Admin 引用。</p>
 
     <h2>TaiPi.Core 基础类库</h2>
     <p>
       <el-link type="primary" href="https://github.com/koeltp/TPCore" target="_blank">GitHub 仓库</el-link>
-      &nbsp;|&nbsp; NuGet：Taipi.Core v1.0.3 &nbsp;|&nbsp; MIT 协议
+      &nbsp;|&nbsp; NuGet：Taipi.Core v1.3.3 &nbsp;|&nbsp; MIT 协议
     </p>
     <p>TaiPi.Core 是项目的基础类库，提供通用响应模型和扩展方法，被 Auth、Admin、Infrastructure 三层引用。</p>
     <el-table :data="taipiCoreModules" stripe border size="small">

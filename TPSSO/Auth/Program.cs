@@ -31,9 +31,24 @@ try
     builder.Services.AddTaiPiExceptionHandling(options =>
     {
         options.UnauthorizedCode = AppCodes.SystemUnauthorized;
+        options.UnauthorizedMessage = "未授权，请先登录";
         options.BadRequestCode = AppCodes.SystemBadRequest;
         options.NotFoundCode = AppCodes.SystemNotFound;
+        options.NotFoundMessage = "请求的资源不存在";
         options.UnknownErrorCode = AppCodes.SystemError;
+        // 请求日志中间件已记录请求信息，避免异常中间件重复记录
+        options.LogException = false;
+    });
+    builder.Services.AddTaiPiRequestLogging(options =>
+    {
+        // 生产环境不记录请求体，避免敏感信息泄露和日志膨胀
+        options.LogRequestBodyEnabled = builder.Environment.IsDevelopment();
+        // 响应体业务错误检测：HTTP 200 但 code 非成功码时提升日志级别
+        options.LogResponseBodyForErrorDetection = true;
+        options.SuccessCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "0" };
+        options.BusinessErrorLogLevel = LogLevel.Warning;
+        // 脱敏字段
+        options.SensitiveFields = ["password", "token", "secret", "authorization", "apiKey", "clientSecret"];
     });
     builder.Services.AddControllers()
         .AddJsonOptions(options =>
@@ -54,9 +69,9 @@ try
     var app = builder.Build();
 
     // 中间件管道
-    app.UseExceptionHandling();
+    app.UseTaiPiExceptionHandling();
     app.UseCorrelationId();
-    app.UseRequestLogging();
+    app.UseTaiPiRequestLogging();
     app.UseForwardedHeadersConfiguration();
 
     if (app.Environment.IsDevelopment())
