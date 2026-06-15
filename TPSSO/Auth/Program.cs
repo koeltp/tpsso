@@ -1,5 +1,4 @@
 using Serilog;
-using Taipi.Core;
 using Taipi.Core.Extensions;
 using TPSSO.Application.Models;
 using TPSSO.Auth.Extensions;
@@ -9,7 +8,6 @@ using TPSSO.Infrastructure.Seeding;
 
 // Serilog 引导日志：在 Host 构建前初始化，确保启动阶段的日志也能写入
 SerilogExtensions.CreateBootstrapLogger();
-
 try
 {
     Log.Information("正在启动 TPSSO.Auth 服务...");
@@ -37,7 +35,7 @@ try
         options.NotFoundMessage = "请求的资源不存在";
         options.UnknownErrorCode = AppCodes.SystemError;
         // 请求日志中间件已记录请求信息，避免异常中间件重复记录
-        options.LogException = false;
+        options.LogException = true;
     });
     builder.Services.AddTaiPiRequestLogging(options =>
     {
@@ -69,8 +67,8 @@ try
     var app = builder.Build();
 
     // 中间件管道
-    app.UseTaiPiExceptionHandling();
     app.UseCorrelationId();
+    app.UseTaiPiExceptionHandling();
     app.UseTaiPiRequestLogging();
     app.UseForwardedHeadersConfiguration();
 

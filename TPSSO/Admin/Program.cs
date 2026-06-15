@@ -52,9 +52,10 @@ try
     var app = builder.Build();
 
     // 中间件管道
-    app.UseTaiPiExceptionHandling();
     app.UseCorrelationId();
+    app.UseTaiPiExceptionHandling();
     app.UseTaiPiRequestLogging();
+    
     if (app.Environment.IsDevelopment())
     {
         app.MapOpenApi();

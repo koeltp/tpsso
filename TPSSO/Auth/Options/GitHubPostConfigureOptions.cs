@@ -29,7 +29,7 @@ public class GitHubPostConfigureOptions : IPostConfigureOptions<GitHubAuthentica
             var clientId = configService.GetStringAsync("GitHub", "ClientId").GetAwaiter().GetResult();
             var clientSecret = configService.GetStringAsync("GitHub", "ClientSecret").GetAwaiter().GetResult();
 
-            _logger.LogInformation("GitHub PostConfigure: ClientId={ClientId}, ClientSecret={HasSecret}", clientId, string.IsNullOrEmpty(clientSecret) ? "空" : clientSecret[..6]);
+            _logger.LogInformation("GitHub PostConfigure: ClientId={ClientId}, ClientSecret={ClientSecret}", clientId, string.IsNullOrEmpty(clientSecret) ? "空" : clientSecret[..6]);
 
             if (!string.IsNullOrEmpty(clientId))
             {
