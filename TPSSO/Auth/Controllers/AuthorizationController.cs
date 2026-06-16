@@ -11,6 +11,7 @@ using OpenIddict.Server.AspNetCore;
 using System.Security.Claims;
 using Taipi.Core.Extensions;
 using TPSSO.Application.Options;
+using TPSSO.Auth.Services;
 using TPSSO.Domain.Entities;
 using TPSSO.Infrastructure.Data;
 using static OpenIddict.Abstractions.OpenIddictConstants;
@@ -30,6 +31,8 @@ public class AuthorizationController : ControllerBase
     private readonly UserManager<User> _userManager;
     private readonly SsoOptions _ssoOptions;
     private readonly ApplicationDbContext _context;
+    private readonly TokenGrantService _tokenGrantService;
+    private readonly ClaimsBuilderService _claimsBuilder;
 
     public AuthorizationController(
         ILogger<AuthorizationController> logger,
@@ -39,7 +42,9 @@ public class AuthorizationController : ControllerBase
         SignInManager<User> signInManager,
         UserManager<User> userManager,
         IOptions<SsoOptions> ssoOptions,
-        ApplicationDbContext context)
+        ApplicationDbContext context,
+        TokenGrantService tokenGrantService,
+        ClaimsBuilderService claimsBuilder)
     {
         _applicationManager = applicationManager;
         _authorizationManager = authorizationManager;
@@ -49,6 +54,8 @@ public class AuthorizationController : ControllerBase
         _ssoOptions = ssoOptions.Value;
         _context = context;
         _logger = logger;
+        _tokenGrantService = tokenGrantService;
+        _claimsBuilder = claimsBuilder;
     }
 
     // ──────── 授权端点 ────────
@@ -210,26 +217,13 @@ public class AuthorizationController : ControllerBase
 
         if (result is { Succeeded: true } && !string.IsNullOrEmpty(result.Principal?.GetClaim(Claims.ClientId)))
         {
-            // 创建 Claims 身份，OpenIddict 将据此生成令牌
-            var identity = new ClaimsIdentity(
-                authenticationType: TokenValidationParameters.DefaultAuthenticationType,
-                nameType: Claims.Name,
-                roleType: Claims.Role);
+            // 使用 ClaimsBuilderService 创建声明，保持与其他授权流一致
+            var scopes = result.Principal.GetScopes();
+            var identity = await _claimsBuilder.CreateUserClaimsIdentityAsync(user, scopes);
+            identity.SetScopes(scopes);
 
-            identity.SetClaim(Claims.Subject, await _userManager.GetUserIdAsync(user))
-                    .SetClaim(Claims.Email, await _userManager.GetEmailAsync(user))
-                    .SetClaim(Claims.Name, await _userManager.GetUserNameAsync(user))
-                    .SetClaim(Claims.PreferredUsername, await _userManager.GetUserNameAsync(user))
-                    .SetClaims(Claims.Role, [.. await _userManager.GetRolesAsync(user)]);
-
-            // 授予请求的 scopes
-            identity.SetScopes(result.Principal.GetScopes());
-
-            // 设置资源
             var resources = await _scopeManager.ListResourcesAsync(identity.GetScopes()).ToListAsync();
             identity.SetResources(resources);
-
-            identity.SetDestinations(GetDestinations);
 
             var properties = new AuthenticationProperties
             {
@@ -261,10 +255,10 @@ public class AuthorizationController : ControllerBase
 
         return request.GrantType switch
         {
-            GrantTypes.AuthorizationCode => await HandleAuthorizationCodeGrant(request),
-            GrantTypes.RefreshToken => await HandleRefreshTokenGrant(request),
-            GrantTypes.ClientCredentials => await HandleClientCredentialsGrant(request),
-            GrantTypes.DeviceCode => await HandleDeviceCodeGrant(request),
+            GrantTypes.AuthorizationCode => await _tokenGrantService.HandleAuthorizationCodeGrantAsync(HttpContext, request),
+            GrantTypes.RefreshToken => await _tokenGrantService.HandleRefreshTokenGrantAsync(HttpContext, request),
+            GrantTypes.ClientCredentials => await _tokenGrantService.HandleClientCredentialsGrantAsync(request),
+            GrantTypes.DeviceCode => await _tokenGrantService.HandleDeviceCodeGrantAsync(HttpContext, request),
             _ => BadRequest(new { error = "unsupported_grant_type", error_description = $"不支持的授权类型：{request.GrantType}" })
         };
     }
@@ -291,124 +285,12 @@ public class AuthorizationController : ControllerBase
     // ──────── 私有方法 ────────
 
     /// <summary>
-    /// 处理授权码换 Token
-    /// </summary>
-    private async Task<IActionResult> HandleAuthorizationCodeGrant(OpenIddictRequest request)
-    {
-        var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-        if (result?.Principal == null)
-            return ForbidWithError(Errors.InvalidGrant, "授权码无效或已过期。");
-
-        var userId = result.Principal.FindFirst(Claims.Subject)?.Value;
-        var user = await _userManager.FindByIdAsync(userId!);
-        if (user == null)
-            return ForbidWithError(Errors.InvalidGrant, "关联用户不存在。");
-
-        // 重新创建 principal，确保包含最新的声明
-        var identity = new ClaimsIdentity(
-            result.Principal.Identities.First().Claims,
-            authenticationType: TokenValidationParameters.DefaultAuthenticationType);
-
-        var newPrincipal = new ClaimsPrincipal(identity);
-        newPrincipal.SetScopes(request.GetScopes());
-        newPrincipal.SetResources(await _scopeManager.ListResourcesAsync(request.GetScopes()).ToListAsync());
-
-        return SignIn(newPrincipal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-    }
-
-    /// <summary>
-    /// 处理 Refresh Token 刷新
-    /// </summary>
-    private async Task<IActionResult> HandleRefreshTokenGrant(OpenIddictRequest request)
-    {
-        _logger.LogInformation("收到 Refresh Token 刷新请求。");
-
-        var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-        if (result?.Principal == null)
-            return ForbidWithError(Errors.InvalidGrant, "Refresh Token 无效或已过期。");
-
-        var userId = result.Principal.FindFirst(Claims.Subject)?.Value;
-        var user = await _userManager.FindByIdAsync(userId!);
-        if (user == null)
-            return ForbidWithError(Errors.InvalidGrant, "关联用户不存在。");
-
-        // 确保用户仍然有权登录（未被禁用等）
-        if (!await _signInManager.CanSignInAsync(user))
-            return ForbidWithError(Errors.InvalidGrant, "用户已被禁用。");
-
-        // 重新构建 principal，确保声明是最新的
-        var identity = await CreateUserClaimsIdentityAsync(user, request.GetScopes());
-        var principal = new ClaimsPrincipal(identity);
-        principal.SetScopes(request.GetScopes());
-        principal.SetResources(await _scopeManager.ListResourcesAsync(request.GetScopes()).ToListAsync());
-
-        return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-    }
-
-    /// <summary>
-    /// 处理客户端凭证授权（M2M，无用户参与）
-    /// </summary>
-    private async Task<IActionResult> HandleClientCredentialsGrant(OpenIddictRequest request)
-    {
-        _logger.LogInformation("收到 Client Credentials 请求，ClientId: {ClientId}", request.ClientId);
-
-        var application = await _applicationManager.FindByClientIdAsync(request.ClientId!) ??
-            throw new InvalidOperationException("客户端应用不存在。");
-
-        // 创建客户端身份（无用户）
-        var identity = new ClaimsIdentity(
-            authenticationType: TokenValidationParameters.DefaultAuthenticationType,
-            nameType: Claims.Name,
-            roleType: Claims.Role);
-
-        identity.AddClaim(new Claim(Claims.Subject, await _applicationManager.GetIdAsync(application) ?? "")
-            .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-        identity.AddClaim(new Claim(Claims.Name, await _applicationManager.GetDisplayNameAsync(application) ?? "")
-            .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-
-        var scopes = request.GetScopes();
-        identity.SetScopes(scopes);
-        identity.SetResources(await _scopeManager.ListResourcesAsync(scopes).ToListAsync());
-
-        var principal = new ClaimsPrincipal(identity);
-
-        return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-    }
-
-    /// <summary>
-    /// 处理设备码授权（用户已在其他设备上确认授权）
-    /// </summary>
-    private async Task<IActionResult> HandleDeviceCodeGrant(OpenIddictRequest request)
-    {
-        _logger.LogInformation("收到 Device Code 请求，ClientId: {ClientId}", request.ClientId);
-
-        var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-        if (result?.Principal == null)
-            return ForbidWithError(Errors.InvalidGrant, "设备码无效或已过期。");
-
-        var userId = result.Principal.FindFirst(Claims.Subject)?.Value;
-        if (string.IsNullOrEmpty(userId))
-            return ForbidWithError(Errors.InvalidGrant, "设备码尚未被用户确认。");
-
-        var user = await _userManager.FindByIdAsync(userId);
-        if (user == null)
-            return ForbidWithError(Errors.InvalidGrant, "关联用户不存在。");
-
-        var identity = await CreateUserClaimsIdentityAsync(user, request.GetScopes());
-        var principal = new ClaimsPrincipal(identity);
-        principal.SetScopes(request.GetScopes());
-        principal.SetResources(await _scopeManager.ListResourcesAsync(request.GetScopes()).ToListAsync());
-
-        return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-    }
-
-    /// <summary>
     /// 签发授权码（含授权确认持久化）
     /// </summary>
     private async Task<IActionResult> SignInWithAuthorizationAsync(User user, object application, OpenIddictRequest request)
     {
         var scopes = request.GetScopes();
-        var identity = await CreateUserClaimsIdentityAsync(user, scopes);
+        var identity = await _claimsBuilder.CreateUserClaimsIdentityAsync(user, scopes);
         identity.SetScopes(scopes);
         identity.SetResources(await _scopeManager.ListResourcesAsync(scopes).ToListAsync());
 
@@ -444,46 +326,6 @@ public class AuthorizationController : ControllerBase
     }
 
     /// <summary>
-    /// 创建包含用户声明的 ClaimsIdentity
-    /// </summary>
-    private async Task<ClaimsIdentity> CreateUserClaimsIdentityAsync(User user, IEnumerable<string> scopes)
-    {
-        var identity = new ClaimsIdentity(
-            authenticationType: TokenValidationParameters.DefaultAuthenticationType,
-            nameType: Claims.Name,
-            roleType: Claims.Role);
-
-        identity.AddClaim(new Claim(Claims.Subject, await _userManager.GetUserIdAsync(user))
-            .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-
-        if (scopes.Contains(Scopes.Profile))
-        {
-            var name = await _userManager.GetUserNameAsync(user);
-            identity.AddClaim(new Claim(Claims.Name, name!)
-                .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-        }
-
-        if (scopes.Contains(Scopes.Email))
-        {
-            var mail = await _userManager.GetEmailAsync(user);
-            identity.AddClaim(new Claim(Claims.Email, mail!)
-                .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-        }
-
-        if (scopes.Contains(Scopes.Roles))
-        {
-            var roles = await _userManager.GetRolesAsync(user);
-            foreach (var role in roles)
-            {
-                identity.AddClaim(new Claim(Claims.Role, role)
-                    .SetDestinations(Destinations.AccessToken, Destinations.IdentityToken));
-            }
-        }
-
-        return identity;
-    }
-
-    /// <summary>
     /// 构造前端登录页重定向 URL
     /// </summary>
     private IActionResult RedirectToLoginPage()
@@ -492,54 +334,5 @@ public class AuthorizationController : ControllerBase
         var encodedReturnUrl = Uri.EscapeDataString(returnUrl);
         var loginUrl = $"{_ssoOptions.LoginBaseUrl}{_ssoOptions.LoginPath}?returnUrl={encodedReturnUrl}";
         return Redirect(loginUrl);
-    }
-
-    /// <summary>
-    /// 返回 OAuth 错误响应
-    /// </summary>
-    private IActionResult ForbidWithError(string error, string description)
-    {
-        return Forbid(
-            authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-            properties: new AuthenticationProperties(new Dictionary<string, string?>
-            {
-                [OpenIddictServerAspNetCoreConstants.Properties.Error] = error,
-                [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = description
-            }));
-    }
-
-    /// <summary>
-    /// 决定每个 Claim 应该出现在哪些令牌中（access_token / id_token）
-    /// </summary>
-    private static IEnumerable<string> GetDestinations(Claim claim)
-    {
-        switch (claim.Type)
-        {
-            case Claims.Name or Claims.PreferredUsername:
-                yield return Destinations.AccessToken;
-                if (claim.Subject!.HasScope(Scopes.Profile))
-                    yield return Destinations.IdentityToken;
-                yield break;
-
-            case Claims.Email:
-                yield return Destinations.AccessToken;
-                if (claim.Subject!.HasScope(Scopes.Email))
-                    yield return Destinations.IdentityToken;
-                yield break;
-
-            case Claims.Role:
-                yield return Destinations.AccessToken;
-                if (claim.Subject!.HasScope(Scopes.Roles))
-                    yield return Destinations.IdentityToken;
-                yield break;
-
-            // 安全戳不出现在令牌中
-            case "AspNet.Identity.SecurityStamp":
-                yield break;
-
-            default:
-                yield return Destinations.AccessToken;
-                yield break;
-        }
     }
 }

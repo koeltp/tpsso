@@ -402,46 +402,37 @@ public class ClientService : IClientService
 
     private static ClientResult ToResult(ClientApplication client)
     {
-        return new ClientResult
-        {
-            Id = client.Id,
-            ClientId = client.ClientId,
-            Name = client.Name,
-            Description = client.Description,
-            Logo = client.Logo,
-            RedirectUris = string.Join("\n", client.RedirectUris.Select(u => u.Uri)),
-            AllowedScopes = string.Join(" ", client.AllowedScopes.Select(s => s.Scope)),
-            GrantTypes = string.Join(" ", client.GrantTypes.Select(g => g.GrantType)),
-            IsPublic = client.IsPublic,
-            ConsentType = client.ConsentType,
-            Status = client.Status.ToString(),
-            ReviewRemark = client.ReviewRemark,
-            CreatedAt = client.CreatedAt,
-            UpdatedAt = client.UpdatedAt,
-            RowVersion = client.RowVersion != null ? Convert.ToBase64String(client.RowVersion) : null
-        };
+        var result = new ClientResult();
+        FillResult(client, result);
+        return result;
     }
 
     private static ClientCreatedResult ToCreatedResult(ClientApplication client)
     {
-        var baseResult = ToResult(client);
-        return new ClientCreatedResult
-        {
-            Id = baseResult.Id,
-            ClientId = baseResult.ClientId,
-            Name = baseResult.Name,
-            Description = baseResult.Description,
-            Logo = baseResult.Logo,
-            RedirectUris = baseResult.RedirectUris,
-            AllowedScopes = baseResult.AllowedScopes,
-            GrantTypes = baseResult.GrantTypes,
-            IsPublic = baseResult.IsPublic,
-            ConsentType = baseResult.ConsentType,
-            Status = baseResult.Status,
-            ReviewRemark = baseResult.ReviewRemark,
-            CreatedAt = baseResult.CreatedAt,
-            UpdatedAt = baseResult.UpdatedAt,
-            RowVersion = baseResult.RowVersion
-        };
+        var result = new ClientCreatedResult();
+        FillResult(client, result);
+        return result;
+    }
+
+    /// <summary>
+    /// 统一映射实体到 DTO，利用 ClientCreatedResult 继承 ClientResult 避免重复字段赋值
+    /// </summary>
+    private static void FillResult(ClientApplication client, ClientResult result)
+    {
+        result.Id = client.Id;
+        result.ClientId = client.ClientId;
+        result.Name = client.Name;
+        result.Description = client.Description;
+        result.Logo = client.Logo;
+        result.RedirectUris = string.Join("\n", client.RedirectUris.Select(u => u.Uri));
+        result.AllowedScopes = string.Join(" ", client.AllowedScopes.Select(s => s.Scope));
+        result.GrantTypes = string.Join(" ", client.GrantTypes.Select(g => g.GrantType));
+        result.IsPublic = client.IsPublic;
+        result.ConsentType = client.ConsentType;
+        result.Status = client.Status.ToString();
+        result.ReviewRemark = client.ReviewRemark;
+        result.CreatedAt = client.CreatedAt;
+        result.UpdatedAt = client.UpdatedAt;
+        result.RowVersion = client.RowVersion != null ? Convert.ToBase64String(client.RowVersion) : null;
     }
 }

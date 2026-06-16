@@ -5,6 +5,7 @@ using OpenIddict.Abstractions;
 using TPSSO.Application.Interfaces;
 using TPSSO.Application.Options;
 using TPSSO.Domain.Entities;
+using TPSSO.Auth.Services;
 using TPSSO.Infrastructure.Data;
 using TPSSO.Infrastructure.Seeding;
 using TPSSO.Infrastructure.Services;
@@ -206,6 +207,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IVerificationCodeService, VerificationCodeService>();
         services.AddScoped<IConfigService, ConfigService>();
+
+        // OAuth 授权服务
+        services.AddScoped<ClaimsBuilderService>();
+        services.AddScoped<TokenGrantService>();
 
         // 种子数据服务
         services.AddScoped<ScopeSeeder>();

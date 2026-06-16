@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { ElMessage, ElNotification } from 'element-plus'
+import { h } from 'vue'
 import router from '@/router'
 import '@/styles/notify.css'
 
@@ -20,7 +21,7 @@ function copyCorrelationId(id: string) {
   })
 }
 
-/** 显示带追踪ID的错误通知 */
+/** 显示带追踪ID的错误通知（使用 VNode 避免 XSS 风险） */
 function showErrorWithTrace(message: string, correlationId?: string) {
   if (!correlationId) {
     ElMessage.error(message)
@@ -28,15 +29,23 @@ function showErrorWithTrace(message: string, correlationId?: string) {
   }
   ElNotification({
     title: '操作失败',
-    dangerouslyUseHTMLString: true,
-    message: `<div>${message}</div><div class="notify-trace">追踪ID: ${correlationId}<a href="javascript:void(0)" class="notify-trace__copy" onclick="window.__copyTraceId__('${correlationId}')">复制</a></div><div class="notify-progress-bar"><div class="notify-progress-bar__inner"></div></div>`,
+    message: h('div', [
+      h('div', message),
+      h('div', { class: 'notify-trace' }, [
+        `追踪ID: ${correlationId}`,
+        h('a', {
+          class: 'notify-trace__copy',
+          onClick: () => copyCorrelationId(correlationId)
+        }, '复制')
+      ]),
+      h('div', { class: 'notify-progress-bar' }, [
+        h('div', { class: 'notify-progress-bar__inner' })
+      ])
+    ]),
     type: 'error',
     duration: 10000
   })
 }
-
-// 暴露复制函数给内联 onclick 调用
-;(window as unknown as Record<string, unknown>).__copyTraceId__ = copyCorrelationId
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '',

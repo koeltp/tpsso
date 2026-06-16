@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, readonly } from 'vue'
 import { getAllDict, type DictTypeResult } from '@/api/dict'
 
 export const useDictStore = defineStore('dict', () => {
@@ -19,8 +19,8 @@ export const useDictStore = defineStore('dict', () => {
   }
 
   return {
-    dictTypes,
-    loading,
+    dictTypes: readonly(dictTypes),
+    loading: readonly(loading),
     fetchAll,
   }
 })
